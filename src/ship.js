@@ -81,8 +81,10 @@ export class Ship {
     // Forward travel.
     this.z += speed * dt;
 
-    // Lateral momentum.
-    this.velU += ax * CFG.accelLat * dt;
+    // Lateral momentum. The chase camera looks down +Z, so world +X is on the
+    // LEFT of the screen; negate the input so "steer right" moves right on screen
+    // (applies to keyboard, mouse and touch alike).
+    this.velU += -ax * CFG.accelLat * dt;
     this.velU -= this.velU * CFG.dampLat * dt;
     this.velU = THREE.MathUtils.clamp(this.velU, -CFG.maxLatVel, CFG.maxLatVel);
     this.u += this.velU * dt;
