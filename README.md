@@ -69,7 +69,7 @@ Then open **http://localhost:8080** and press **Space** (or tap) to launch.
 | --- | --- | --- |
 | Procedural spine | `src/path.js` | The canyon is one continuous function of forward distance — layered sines for meander, dive and width, with banking derived from curvature. Seamless forever, and every subsystem agrees on where the walls are. |
 | Terrain | `src/canyon.js` | A rolling, grid-snapped window of cross-sections: a near-black glass surface plus an additive neon wireframe (cyan floor, magenta walls). |
-| Flight & collision | `src/ship.js` | Momentum-based steering, corridor collision, graze detection, a low-poly wedge with glowing edges. |
+| Flight & collision | `src/ship.js` | Momentum-based steering, corridor collision, graze detection, and a detailed neon starfighter — a faceted violet hull with a glowing canopy, long swept wings that fork at the tips, and twin engine nacelles that flare magenta under thrust. |
 | Gates | `src/gates.js` | Pooled rings addressed by absolute index so each resolves hit/miss exactly once. |
 | The Rift | `src/rift.js` | An animated fBm energy curtain plus a red flood light and a danger signal that drives the HUD and post FX. |
 | Particles | `src/particles.js` | Streaming speed dust, graze sparks, exhaust trail and crash bursts. |
