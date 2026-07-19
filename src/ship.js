@@ -1,0 +1,175 @@
+// The hovership: a low-poly wedge with glowing edges, plus all of the flight
+// model -- lateral/vertical momentum, corridor collision, and graze detection.
+// Nose is modelled along -Z so a plain lookAt() aims it down the corridor.
+
+import * as THREE from 'three';
+import { CFG } from './config.js';
+import { halfWidth, worldFromLocal, tangent } from './path.js';
+
+export class Ship {
+  constructor(scene) {
+    this.group = new THREE.Group();
+    scene.add(this.group);
+
+    const glow = new THREE.Color(CFG.colShip);
+
+    // Hull: a sharp 4-sided wedge.
+    const hullGeo = new THREE.ConeGeometry(2.4, 7.2, 4);
+    hullGeo.rotateX(-Math.PI / 2); // nose -> -Z
+    const hullMat = new THREE.MeshStandardMaterial({
+      color: 0x0a0d18,
+      metalness: 0.85,
+      roughness: 0.3,
+      emissive: 0x061a2a,
+      emissiveIntensity: 0.6,
+      flatShading: true,
+    });
+    const hull = new THREE.Mesh(hullGeo, hullMat);
+    this.group.add(hull);
+    this.group.add(edgeGlow(hullGeo, glow, 1.0));
+
+    // Swept wings.
+    const wingGeo = new THREE.BoxGeometry(6.4, 0.35, 3.0);
+    const wingMat = hullMat.clone();
+    const wingL = new THREE.Mesh(wingGeo, wingMat);
+    wingL.position.set(0, -0.4, 1.8);
+    this.group.add(wingL);
+    this.group.add(edgeGlow(wingGeo, new THREE.Color(CFG.colWall), 0.8, wingL.position, null));
+
+    // Tail fin.
+    const finGeo = new THREE.BoxGeometry(0.35, 2.6, 2.2);
+    const fin = new THREE.Mesh(finGeo, wingMat);
+    fin.position.set(0, 1.0, 2.4);
+    this.group.add(fin);
+    this.group.add(edgeGlow(finGeo, glow, 0.7, fin.position, null));
+
+    // Engine core at the tail + a coloured light that spills onto the walls.
+    const engGeo = new THREE.CylinderGeometry(1.1, 1.4, 0.6, 12);
+    engGeo.rotateX(Math.PI / 2);
+    this.engineMat = new THREE.MeshBasicMaterial({
+      color: glow,
+      transparent: true,
+      opacity: 0.95,
+    });
+    this.engine = new THREE.Mesh(engGeo, this.engineMat);
+    this.engine.position.set(0, 0, 3.5);
+    this.group.add(this.engine);
+
+    this.engineLight = new THREE.PointLight(CFG.colShip, 6, 60, 2);
+    this.engineLight.position.set(0, 0, 4);
+    this.group.add(this.engineLight);
+
+    this._tail = new THREE.Vector3();
+    this._pos = new THREE.Vector3();
+    this._fwd = new THREE.Vector3();
+    this.reset();
+  }
+
+  reset() {
+    this.z = 0;
+    this.u = 0;
+    this.v = CFG.wallHeight * 0.42;
+    this.velU = 0;
+    this.velV = 0;
+    this.thrust = 0.5;
+    this.alive = true;
+  }
+
+  // Integrate one step. `speed` is the current forward m/s. Returns a report of
+  // any crash / graze that happened this frame so the game can react.
+  update(dt, ax, ay, speed) {
+    // Forward travel.
+    this.z += speed * dt;
+
+    // Lateral momentum.
+    this.velU += ax * CFG.accelLat * dt;
+    this.velU -= this.velU * CFG.dampLat * dt;
+    this.velU = THREE.MathUtils.clamp(this.velU, -CFG.maxLatVel, CFG.maxLatVel);
+    this.u += this.velU * dt;
+
+    // Vertical momentum.
+    this.velV += ay * CFG.accelVert * dt;
+    this.velV -= this.velV * CFG.dampVert * dt;
+    this.velV = THREE.MathUtils.clamp(this.velV, -CFG.maxVertVel, CFG.maxVertVel);
+    this.v += this.velV * dt;
+
+    // Collision against the corridor cross-section.
+    const hw = halfWidth(this.z);
+    const limU = hw - CFG.shipRadius;
+    const minV = CFG.floorClear;
+    const maxV = CFG.wallHeight - CFG.ceilClear;
+
+    const report = { crash: false, graze: false, gap: Infinity, side: 0 };
+
+    // Ceiling is an open sky -> cap softly, never fatal.
+    if (this.v > maxV) { this.v = maxV; if (this.velV > 0) this.velV = 0; }
+
+    // Floor and walls are fatal on contact.
+    if (this.v <= minV) { report.crash = true; report.side = 2; }
+    if (Math.abs(this.u) >= limU) { report.crash = true; report.side = Math.sign(this.u); }
+
+    // Graze: skimming a surface without touching it.
+    const gapL = limU - Math.abs(this.u);
+    const gapFloor = this.v - minV;
+    report.gap = Math.min(gapL, gapFloor);
+    if (!report.crash && report.gap < CFG.grazeDist) {
+      report.graze = true;
+      report.side = gapL < gapFloor ? Math.sign(this.u) : 2;
+    }
+
+    if (report.crash) this.alive = false;
+    return report;
+  }
+
+  // Place and orient the mesh from the current flight state.
+  syncTransform(dt, thrustLevel) {
+    worldFromLocal(this.z, this.u, this.v, this._pos);
+    tangent(this.z, this.u, this.v, this._fwd);
+
+    this.group.position.copy(this._pos);
+    this.group.up.set(0, 1, 0);
+    this.group.lookAt(this._pos.clone().add(this._fwd));
+
+    // Bank into turns and pitch into climbs (cosmetic).
+    const roll = THREE.MathUtils.clamp(-this.velU * 0.028, -0.7, 0.7);
+    const pitch = THREE.MathUtils.clamp(-this.velV * 0.018, -0.45, 0.45);
+    this.group.rotateZ(roll);
+    this.group.rotateX(pitch);
+
+    // Idle bob for life.
+    const bob = Math.sin(performance.now() * 0.006) * 0.15;
+    this.group.translateY(bob);
+
+    // Engine visuals track thrust.
+    this.thrust += (thrustLevel - this.thrust) * Math.min(1, dt * 8);
+    const flick = 0.85 + Math.random() * 0.15;
+    this.engineMat.opacity = 0.6 + this.thrust * 0.4 * flick;
+    this.engine.scale.setScalar(0.8 + this.thrust * 0.9 * flick);
+    this.engineLight.intensity = 3 + this.thrust * 9 * flick;
+  }
+
+  worldPos(out = this._pos) { return worldFromLocal(this.z, this.u, this.v, out); }
+  forward(out = this._fwd) { return tangent(this.z, this.u, this.v, out); }
+
+  // World position of the engine (for the exhaust trail).
+  tailWorld(out = this._tail) {
+    return this.group.localToWorld(out.set(0, 0, 4));
+  }
+
+  setVisible(v) { this.group.visible = v; }
+}
+
+// Build an additive wireframe overlay for a geometry so edges read as neon.
+function edgeGlow(geo, color, opacity = 1, position = null) {
+  const edges = new THREE.EdgesGeometry(geo);
+  const mat = new THREE.LineBasicMaterial({
+    color,
+    transparent: true,
+    opacity,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const seg = new THREE.LineSegments(edges, mat);
+  if (position) seg.position.copy(position);
+  return seg;
+}

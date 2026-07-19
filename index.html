@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#12002e" />
+  <title>RIFTBREAK VELOCITY — Counter Strike Racer</title>
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛸</text></svg>" />
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <!-- Heads-up display -->
+  <div id="hud">
+    <div class="corner tl">
+      <div class="label">DISTANCE</div>
+      <div class="big"><span id="distance">0</span><span class="unit">m</span></div>
+      <div class="sub-stat"><span class="label">STYLE</span> <span id="style">0</span></div>
+    </div>
+
+    <div class="corner tr">
+      <div class="label">VELOCITY</div>
+      <div class="big"><span id="speed">0</span><span class="unit">m/s</span></div>
+      <div class="mult-row"><span id="mult" class="mult">x1</span> <span id="chain" class="chainlbl"></span></div>
+    </div>
+
+    <div id="dangerWrap" class="meter danger">
+      <div class="label">RIFT PROXIMITY</div>
+      <div class="bar"><div id="dangerBar" class="fill"></div></div>
+    </div>
+
+    <div class="meter boost">
+      <div class="label">BOOST</div>
+      <div class="bar"><div id="boostBar" class="fill"></div></div>
+    </div>
+
+    <div id="muteIndicator" class="mute">SOUND (M)</div>
+  </div>
+
+  <div id="popups"></div>
+
+  <!-- Menu / game-over overlay -->
+  <div id="overlay">
+    <div class="panel">
+      <h1 id="overlayTitle"></h1>
+      <div id="overlaySub" class="overlay-sub"></div>
+      <div id="overlayStats" class="overlay-stats"></div>
+      <div id="overlayHint" class="overlay-hint"></div>
+    </div>
+    <div class="scanlines"></div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./lib/three.module.js",
+      "three/addons/": "./lib/jsm/"
+    }
+  }
+  </script>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
