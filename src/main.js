@@ -63,6 +63,15 @@ class Game {
     this.hud.showMenu(this.best);
     this.hud.setMuted(this.audio.muted);
 
+    // Tappable mute (handy on touch, where there's no M key).
+    if (this.hud.muteIndicator) {
+      this.hud.muteIndicator.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.audio.init();
+        this.hud.setMuted(this.audio.toggleMute());
+      });
+    }
+
     addEventListener('resize', () => this._onResize());
     this.last = performance.now();
     requestAnimationFrame((t) => this._loop(t));

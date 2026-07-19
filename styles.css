@@ -21,7 +21,22 @@ html, body {
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
   cursor: crosshair;
+  /* Kill page scroll / pinch-zoom / pull-to-refresh on touch devices. */
+  touch-action: none;
+  overscroll-behavior: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
+
+/* Show the right control hints for the device. */
+.touch-only { display: none; }
+.ctrl-touch { display: none; }
+body.touch .desktop-only { display: none; }
+body.touch .touch-only { display: inline; }
+body.touch .ctrl-desktop { display: none; }
+body.touch .ctrl-touch { display: flex; }
+body.touch { cursor: default; }
 
 #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 
@@ -108,8 +123,40 @@ html, body {
   font-size: 11px;
   letter-spacing: 0.2em;
   color: #5f8296;
+  pointer-events: auto;
+  cursor: pointer;
 }
 .mute.muted { color: #ff6f8f; }
+
+/* On-screen boost pad — only on touch devices, only during play. */
+#boostBtn {
+  display: none;
+  position: absolute;
+  right: 26px;
+  bottom: 74px;
+  width: 104px;
+  height: 104px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 234, 255, 0.7);
+  background: radial-gradient(circle at 50% 40%, rgba(0, 234, 255, 0.22), rgba(0, 234, 255, 0.06) 70%, transparent);
+  color: #d9fbff;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  pointer-events: auto;
+  box-shadow: 0 0 18px rgba(0, 234, 255, 0.35), inset 0 0 18px rgba(0, 234, 255, 0.18);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
+}
+#boostBtn.down {
+  transform: scale(0.92);
+  background: radial-gradient(circle at 50% 40%, rgba(0, 234, 255, 0.55), rgba(0, 234, 255, 0.18) 70%, transparent);
+  box-shadow: 0 0 30px rgba(0, 234, 255, 0.7), inset 0 0 22px rgba(0, 234, 255, 0.4);
+}
+body.touch #hud.active #boostBtn { display: block; }
 
 /* -------------------------------------------------------------- Popups --- */
 #popups {
@@ -245,9 +292,16 @@ html, body {
 }
 
 @media (max-width: 640px) {
-  .big { font-size: 38px; }
-  .corner { top: 16px; }
-  .corner.tl { left: 16px; }
-  .corner.tr { right: 16px; }
-  .meter { width: 70vw; }
+  .big { font-size: 33px; }
+  .big .unit { font-size: 13px; }
+  .corner { top: 13px; }
+  .corner.tl { left: 14px; }
+  .corner.tr { right: 14px; }
+  .sub-stat, .mult-row { margin-top: 4px; }
+  .mult { font-size: 20px; }
+  .meter { width: 58vw; }
+  .danger { top: 62px; }          /* clear the big numbers up top */
+  .boost { bottom: 24px; }
+  #boostBtn { width: 90px; height: 90px; right: 18px; bottom: 62px; font-size: 13px; }
+  .controls { font-size: 13px; }
 }

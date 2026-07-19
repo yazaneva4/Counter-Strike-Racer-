@@ -48,19 +48,23 @@ export class HUD {
 
   showMenu(best) {
     this.overlay.className = 'show menu';
-    this.overlayTitle.innerHTML = 'RIFTBREAK <span class="accent">VELOCITY</span>';
-    this.overlaySub.textContent = 'Counter Strike Racer';
+    this.overlayTitle.innerHTML = 'COUNTER STRIKE <span class="accent">RACER</span>';
+    this.overlaySub.textContent = 'Neon Canyon Hyperracer';
     this.overlayStats.innerHTML = best > 0
       ? `<div class="best">BEST&nbsp;&nbsp;${best.toLocaleString()} m</div>`
       : '';
     this.overlayHint.innerHTML =
-      `<div class="controls">
+      `<div class="controls ctrl-desktop">
          <span><b>&#8592; &#8594;</b> / <b>A D</b> &nbsp;steer</span>
          <span><b>&#8593; &#8595;</b> / <b>W S</b> &nbsp;climb / dive</span>
          <span><b>SPACE</b> / <b>SHIFT</b> &nbsp;boost</span>
          <span>or <b>move the mouse</b> to fly</span>
        </div>
-       <div class="launch">Press <b>SPACE</b> or click to launch</div>`;
+       <div class="controls ctrl-touch">
+         <span><b>Drag</b> anywhere &nbsp;to steer &amp; fly</span>
+         <span>hold the <b>BOOST</b> pad &nbsp;to accelerate</span>
+       </div>
+       <div class="launch"><span class="desktop-only">Press <b>SPACE</b> or click to launch</span><span class="touch-only">Tap to launch</span></div>`;
     this.hudRoot.classList.remove('active');
   }
 
@@ -76,7 +80,7 @@ export class HUD {
          <div><span>GATES</span><b>${r.gates}</b></div>
        </div>
        ${r.newBest ? '<div class="best newbest">NEW BEST!</div>' : `<div class="best">BEST&nbsp;&nbsp;${r.best.toLocaleString()} m</div>`}`;
-    this.overlayHint.innerHTML = '<div class="launch">Press <b>SPACE</b> or click to fly again</div>';
+    this.overlayHint.innerHTML = '<div class="launch"><span class="desktop-only">Press <b>SPACE</b> or click to fly again</span><span class="touch-only">Tap to fly again</span></div>';
     this.hudRoot.classList.remove('active');
   }
 
