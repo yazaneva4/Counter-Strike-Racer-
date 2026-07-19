@@ -12,7 +12,7 @@ export const CFG = {
   widthMin: 13,      // tightest the canyon ever gets (the "fracture")
 
   // ---- Ship / flight ---------------------------------------------------
-  shipRadius: 2.2,   // collision radius
+  shipRadius: 1.15,  // collision radius (matches the compact jet)
   startSpeed: 62,    // metres/second at launch
   maxSpeed: 235,     // hard cap on forward speed
   speedRamp: 0.55,   // how quickly base speed climbs with distance
