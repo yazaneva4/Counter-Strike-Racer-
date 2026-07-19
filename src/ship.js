@@ -6,13 +6,9 @@ import * as THREE from 'three';
 import { CFG } from './config.js';
 import { halfWidth, worldFromLocal, tangent } from './path.js';
 
-// Keep the visible model and its flight collision footprint in proportion.
-const JET_SCALE = 0.42;
-
 export class Ship {
   constructor(scene) {
     this.group = new THREE.Group();
-    this.group.scale.setScalar(JET_SCALE);
     scene.add(this.group);
 
     const glow = new THREE.Color(CFG.colShip);
@@ -32,26 +28,13 @@ export class Ship {
     this.group.add(hull);
     this.group.add(edgeGlow(hullGeo, glow, 1.0));
 
-    // Wing layout: a broad, straight centre panel with a matching V-fork on
-    // each end. The body stays rectangular; only the outer tips split.
+    // Swept wings.
+    const wingGeo = new THREE.BoxGeometry(6.4, 0.35, 3.0);
     const wingMat = hullMat.clone();
-    const wingGlow = new THREE.Color(CFG.colWall);
-    const wingY = -0.48;
-    const sparZ = 1.05;
-    const wingPanelGeo = new THREE.BoxGeometry(7.4, 0.2, 0.75);
-    const wingPanel = new THREE.Mesh(wingPanelGeo, wingMat);
-    wingPanel.position.set(0, wingY, sparZ);
-    this.group.add(wingPanel);
-    this.group.add(edgeGlow(wingPanelGeo, wingGlow, 0.8, wingPanel.position));
-
-    const leftTip = new THREE.Vector3(-3.7, wingY, sparZ);
-    const rightTip = new THREE.Vector3(3.7, wingY, sparZ);
-    const addWingBeam = (from, to) => addBeam(this.group, from, to, wingMat, wingGlow, 0.8);
-
-    addWingBeam(leftTip, new THREE.Vector3(-5.6, wingY, -0.55));
-    addWingBeam(leftTip, new THREE.Vector3(-5.6, wingY, 2.65));
-    addWingBeam(rightTip, new THREE.Vector3(5.6, wingY, -0.55));
-    addWingBeam(rightTip, new THREE.Vector3(5.6, wingY, 2.65));
+    const wingL = new THREE.Mesh(wingGeo, wingMat);
+    wingL.position.set(0, -0.4, 1.8);
+    this.group.add(wingL);
+    this.group.add(edgeGlow(wingGeo, new THREE.Color(CFG.colWall), 0.8, wingL.position, null));
 
     // Tail fin.
     const finGeo = new THREE.BoxGeometry(0.35, 2.6, 2.2);
@@ -191,26 +174,4 @@ function edgeGlow(geo, color, opacity = 1, position = null) {
   const seg = new THREE.LineSegments(edges, mat);
   if (position) seg.position.copy(position);
   return seg;
-}
-
-// Add one solid neon wing strut between two points in the local XZ plane.
-function addBeam(group, from, to, material, glow, glowOpacity) {
-  const direction = new THREE.Vector3().subVectors(to, from);
-  const length = direction.length();
-  const geo = new THREE.BoxGeometry(0.22, 0.16, length);
-  const rotation = new THREE.Quaternion().setFromUnitVectors(
-    new THREE.Vector3(0, 0, 1),
-    direction.normalize(),
-  );
-  const position = new THREE.Vector3().addVectors(from, to).multiplyScalar(0.5);
-
-  const beam = new THREE.Mesh(geo, material);
-  beam.position.copy(position);
-  beam.quaternion.copy(rotation);
-  group.add(beam);
-
-  const beamGlow = edgeGlow(geo, glow, glowOpacity);
-  beamGlow.position.copy(position);
-  beamGlow.quaternion.copy(rotation);
-  group.add(beamGlow);
 }
