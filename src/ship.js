@@ -36,8 +36,8 @@ export class Ship {
     this._buildEngines();
     this._buildFins();
 
-    // Overall size in the corridor.
-    this.body.scale.setScalar(0.82);
+    // Overall size in the corridor (kept small so it reads as a nimble dart).
+    this.body.scale.setScalar(0.55);
 
     this._tail = new THREE.Vector3();
     this._pos = new THREE.Vector3();
@@ -90,34 +90,35 @@ export class Ship {
   }
 
   _buildCanopy() {
-    // A stretched half-dome of translucent violet that glows from within.
-    const geo = new THREE.SphereGeometry(1.05, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.55);
-    geo.scale(0.82, 0.72, 1.7);
-    geo.rotateX(-Math.PI / 2);           // dome faces up, long axis along Z
-    geo.translate(0, 0.72, -0.4);
+    // A large elongated bubble canopy that glows violet from within, framed by
+    // magenta neon ribs -- the dominant feature of the airframe (as in the art).
+    const geo = new THREE.SphereGeometry(1.15, 12, 8);
+    geo.scale(0.92, 0.98, 2.05);
+    geo.translate(0, 0.5, -0.7);
     this.canopyMat = new THREE.MeshStandardMaterial({
-      color: 0x2a0f4a,
+      color: 0x230d44,
       emissive: COL_CANOPY,
-      emissiveIntensity: 1.15,
-      metalness: 0.4,
-      roughness: 0.15,
+      emissiveIntensity: 1.2,
+      metalness: 0.45,
+      roughness: 0.12,
       transparent: true,
-      opacity: 0.92,
+      opacity: 0.9,
     });
     const canopy = new THREE.Mesh(geo, this.canopyMat);
     this.body.add(canopy);
-    this.body.add(neon(geo, COL_MAGENTA, 0.6));
+    this.body.add(neon(geo, COL_MAGENTA, 0.55)); // magenta canopy framing
   }
 
   _buildWings() {
-    // A swept blade that forks into a forward spike + aft point at the tip.
-    // Outline in shape space: X = span outboard, Y = chord (becomes +Z = aft).
+    // Long, thin, nearly-straight wings that end in a forked dart tip -- a
+    // forward barb, an outboard spike and an aft barb (the "><" from the art).
+    // Shape space: X = span outboard, Y = chord (becomes +Z = aft).
     const pts = [
-      [0.4, -1.9], [3.0, -0.9], [6.0, 0.5], [8.4, 1.6],
-      [10.4, 1.8],  // forward tip spike
-      [8.9, 2.7],   // fork notch
-      [9.7, 3.7],   // aft tip point
-      [6.6, 3.2], [3.6, 2.7], [1.4, 2.1], [0.4, 1.6],
+      [0.4, -1.3], [3.5, -0.85], [6.5, -0.6], [8.6, -0.6],
+      [9.7, -1.55],  // forward barb
+      [11.6, 0.0],   // outboard spike
+      [9.7, 1.55],   // aft barb
+      [8.6, 0.6], [6.5, 0.65], [3.5, 0.95], [0.4, 1.3],
     ];
     const shape = new THREE.Shape();
     shape.moveTo(pts[0][0], pts[0][1]);
@@ -125,43 +126,43 @@ export class Ship {
     shape.closePath();
 
     const wingGeo = new THREE.ExtrudeGeometry(shape, {
-      depth: 0.34, bevelEnabled: true, bevelThickness: 0.08,
-      bevelSize: 0.08, bevelSegments: 1, steps: 1,
+      depth: 0.24, bevelEnabled: true, bevelThickness: 0.06,
+      bevelSize: 0.06, bevelSegments: 1, steps: 1,
     });
     wingGeo.rotateX(-Math.PI / 2);       // planform into X(span)/Z(chord)
-    wingGeo.translate(0, -0.17, 0);      // centre the thickness on Y
+    wingGeo.translate(0, -0.12, 0);      // centre the thickness on Y
 
     const wingMat = new THREE.MeshStandardMaterial({
-      color: 0x24124f, metalness: 0.8, roughness: 0.3,
-      emissive: 0x1a0940, emissiveIntensity: 0.6, side: THREE.DoubleSide,
+      color: 0x241452, metalness: 0.82, roughness: 0.28,
+      emissive: 0x1a0940, emissiveIntensity: 0.55, side: THREE.DoubleSide,
       flatShading: true,
     });
 
     for (const dir of [1, -1]) {
       const wing = new THREE.Mesh(wingGeo, wingMat);
       wing.scale.x = dir;                // mirror for the left wing
-      wing.position.set(dir * 1.25, -0.15, 0.4);
-      wing.rotation.z = dir * 0.14;      // a little dihedral (tips up)
+      wing.position.set(dir * 1.1, 0.05, 0.2);
+      wing.rotation.z = dir * 0.08;      // gentle dihedral (tips up)
       this.body.add(wing);
-      wing.add(neon(wingGeo, COL_MAGENTA, 0.95)); // full neon outline
+      wing.add(neon(wingGeo, COL_MAGENTA, 0.5)); // subtle full outline
 
-      // A bright cyan spar strip running out along the wing.
-      const spar = new THREE.Mesh(
-        new THREE.BoxGeometry(9.0, 0.12, 0.34),
+      // Magenta neon strip along the TOP leading edge, running the full span.
+      const top = new THREE.Mesh(
+        new THREE.BoxGeometry(10.9, 0.09, 0.5),
+        new THREE.MeshBasicMaterial({ color: COL_MAGENTA, transparent: true, opacity: 0.95,
+          blending: THREE.AdditiveBlending, depthWrite: false }));
+      top.position.set(dir * 5.6, 0.15, -0.42);
+      top.rotation.y = dir * -0.06;
+      wing.add(top);
+
+      // Cyan neon strip along the underside/trailing edge, full span.
+      const bot = new THREE.Mesh(
+        new THREE.BoxGeometry(10.4, 0.09, 0.5),
         new THREE.MeshBasicMaterial({ color: COL_CYAN, transparent: true, opacity: 0.9,
           blending: THREE.AdditiveBlending, depthWrite: false }));
-      spar.position.set(dir * 5.0, 0.12, 1.0);
-      spar.rotation.y = dir * -0.26;
-      wing.add(spar);
-
-      // A hot magenta leading-edge blade (kept just inside the tip).
-      const lead = new THREE.Mesh(
-        new THREE.BoxGeometry(8.8, 0.16, 0.16),
-        new THREE.MeshBasicMaterial({ color: COL_ENGINE, transparent: true, opacity: 0.9,
-          blending: THREE.AdditiveBlending, depthWrite: false }));
-      lead.position.set(dir * 4.6, 0.18, -0.35);
-      lead.rotation.y = dir * -0.42;
-      wing.add(lead);
+      bot.position.set(dir * 5.3, -0.15, 0.5);
+      bot.rotation.y = dir * -0.06;
+      wing.add(bot);
     }
   }
 
@@ -211,6 +212,35 @@ export class Ship {
 
       this.engines.push({ disc, discMat, core, plume, plumeMat, light });
     }
+
+    // Central exhaust: the bright magenta jet that dominates the tail in the art.
+    const cDisc = new THREE.Mesh(new THREE.CircleGeometry(0.62, 22),
+      new THREE.MeshBasicMaterial({ color: COL_ENGINE, transparent: true, opacity: 0.95,
+        blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+    cDisc.position.set(0, -0.32, 4.0);
+    this.body.add(cDisc);
+
+    const cCore = new THREE.Mesh(new THREE.CircleGeometry(0.3, 18),
+      new THREE.MeshBasicMaterial({ color: 0xffe6ff, transparent: true, opacity: 0.98,
+        blending: THREE.AdditiveBlending, depthWrite: false }));
+    cCore.position.set(0, -0.32, 4.03);
+    this.body.add(cCore);
+
+    const cPlumeGeo = new THREE.ConeGeometry(0.5, 4.4, 16, 1, true);
+    cPlumeGeo.rotateX(-Math.PI / 2);
+    cPlumeGeo.translate(0, 0, 2.3);
+    const cPlumeMat = new THREE.MeshBasicMaterial({ color: COL_ENGINE, transparent: true,
+      opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    const cPlume = new THREE.Mesh(cPlumeGeo, cPlumeMat);
+    cPlume.position.set(0, -0.32, 4.0);
+    this.body.add(cPlume);
+
+    const cLight = new THREE.PointLight(COL_ENGINE, 5, 55, 2);
+    cLight.position.set(0, -0.28, 4.7);
+    this.body.add(cLight);
+
+    this.engines.push({ disc: cDisc, discMat: cDisc.material, core: cCore,
+      plume: cPlume, plumeMat: cPlumeMat, light: cLight });
   }
 
   _buildFins() {
@@ -333,7 +363,7 @@ export class Ship {
 
   // World position of the engines (for the exhaust trail).
   tailWorld(out = this._tail) {
-    return this.group.localToWorld(out.set(0, -0.12, 3.4));
+    return this.group.localToWorld(out.set(0, -0.28, 3.4));
   }
 
   setVisible(v) { this.group.visible = v; }
