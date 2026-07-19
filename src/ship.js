@@ -32,22 +32,26 @@ export class Ship {
     this.group.add(hull);
     this.group.add(edgeGlow(hullGeo, glow, 1.0));
 
-    // Wing layout: a straight centre spar with equal V-shaped forks at each
-    // end. This follows the supplied reference rather than using one solid
-    // slab, and all four tip struts are mirrored from the same measurements.
+    // Wing layout: a broad, straight centre panel with a matching V-fork on
+    // each end. The body stays rectangular; only the outer tips split.
     const wingMat = hullMat.clone();
     const wingGlow = new THREE.Color(CFG.colWall);
     const wingY = -0.48;
     const sparZ = 1.05;
-    const leftTip = new THREE.Vector3(-4.2, wingY, sparZ);
-    const rightTip = new THREE.Vector3(4.2, wingY, sparZ);
+    const wingPanelGeo = new THREE.BoxGeometry(7.4, 0.2, 0.75);
+    const wingPanel = new THREE.Mesh(wingPanelGeo, wingMat);
+    wingPanel.position.set(0, wingY, sparZ);
+    this.group.add(wingPanel);
+    this.group.add(edgeGlow(wingPanelGeo, wingGlow, 0.8, wingPanel.position));
+
+    const leftTip = new THREE.Vector3(-3.7, wingY, sparZ);
+    const rightTip = new THREE.Vector3(3.7, wingY, sparZ);
     const addWingBeam = (from, to) => addBeam(this.group, from, to, wingMat, wingGlow, 0.8);
 
-    addWingBeam(leftTip, rightTip);
-    addWingBeam(leftTip, new THREE.Vector3(-5.85, wingY, -0.6));
-    addWingBeam(leftTip, new THREE.Vector3(-5.85, wingY, 2.7));
-    addWingBeam(rightTip, new THREE.Vector3(5.85, wingY, -0.6));
-    addWingBeam(rightTip, new THREE.Vector3(5.85, wingY, 2.7));
+    addWingBeam(leftTip, new THREE.Vector3(-5.6, wingY, -0.55));
+    addWingBeam(leftTip, new THREE.Vector3(-5.6, wingY, 2.65));
+    addWingBeam(rightTip, new THREE.Vector3(5.6, wingY, -0.55));
+    addWingBeam(rightTip, new THREE.Vector3(5.6, wingY, 2.65));
 
     // Tail fin.
     const finGeo = new THREE.BoxGeometry(0.35, 2.6, 2.2);
