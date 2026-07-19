@@ -61,18 +61,18 @@ export class Ship {
   _buildHull() {
     const mat = this._hullMaterial();
 
-    // Forward hull: a long faceted hex nose spearing down -Z.
-    const noseGeo = new THREE.ConeGeometry(1.55, 6.6, 6);
+    // Forward hull: a long rounded nose spearing down -Z.
+    const noseGeo = new THREE.ConeGeometry(1.55, 6.6, 8);
     noseGeo.rotateX(-Math.PI / 2);       // tip -> -Z
     noseGeo.translate(0, 0, -1.7);       // push the point forward
     const nose = new THREE.Mesh(noseGeo, mat);
     this.body.add(nose);
     this.body.add(neon(noseGeo, COL_CYAN, 0.9));
 
-    // Mid body: a hex barrel that carries the wings and cockpit.
-    const midGeo = new THREE.CylinderGeometry(1.55, 1.15, 3.6, 6);
+    // Mid body: a rounded barrel that carries the wings and cockpit.
+    const midGeo = new THREE.CylinderGeometry(1.55, 1.15, 3.6, 8);
     midGeo.rotateX(Math.PI / 2);
-    midGeo.rotateZ(Math.PI / 6);         // flat facet up, matching the nose
+    midGeo.rotateZ(Math.PI / 8);         // flat facet up, matching the nose
     midGeo.translate(0, 0, 2.0);
     const mid = new THREE.Mesh(midGeo, this._hullMaterial(true));
     this.body.add(mid);
@@ -87,6 +87,18 @@ export class Ship {
     const keel = new THREE.Mesh(keelGeo, mat);
     this.body.add(keel);
     this.body.add(neon(keelGeo, COL_MAGENTA, 0.5));
+
+    // Cyan shoulder accents sweeping back from the cockpit toward the wing
+    // roots -- the bright cyan panelling either side of the body in the art.
+    for (const dir of [1, -1]) {
+      const strake = new THREE.Mesh(
+        new THREE.BoxGeometry(0.1, 0.1, 3.6),
+        new THREE.MeshBasicMaterial({ color: COL_CYAN, transparent: true, opacity: 0.85,
+          blending: THREE.AdditiveBlending, depthWrite: false }));
+      strake.position.set(dir * 1.0, 0.15, 1.2);
+      strake.rotation.y = dir * 0.13;
+      this.body.add(strake);
+    }
   }
 
   _buildCanopy() {
@@ -170,13 +182,25 @@ export class Ship {
     const nacelleMat = this._hullMaterial(true);
 
     for (const dir of [1, -1]) {
-      // Nacelle housing, flanking the tail.
-      const housingGeo = new THREE.CylinderGeometry(0.85, 1.0, 3.0, 8);
+      // Intake pod, flanking the cockpit, splayed slightly outward at the base.
+      const housingGeo = new THREE.CylinderGeometry(0.8, 0.98, 3.2, 8);
       housingGeo.rotateX(Math.PI / 2);
       const housing = new THREE.Mesh(housingGeo, nacelleMat);
-      housing.position.set(dir * 1.25, -0.15, 2.6);
+      housing.position.set(dir * 1.3, -0.12, 2.5);
+      housing.rotation.z = dir * -0.09;   // bottom splays outward
       this.body.add(housing);
       housing.add(neon(housingGeo, COL_CYAN, 0.7));
+
+      // Horizontal intake louvers glowing violet on the pod (as in the art).
+      for (let k = 0; k < 3; k++) {
+        const louver = new THREE.Mesh(
+          new THREE.BoxGeometry(1.0, 0.07, 0.5),
+          new THREE.MeshBasicMaterial({ color: COL_CANOPY, transparent: true, opacity: 0.8,
+            blending: THREE.AdditiveBlending, depthWrite: false }));
+        louver.position.set(dir * 1.32, -0.7 + k * 0.5, 3.55);
+        louver.rotation.z = dir * -0.09;
+        this.body.add(louver);
+      }
 
       // Glowing exhaust disc facing the camera (+Z), with a white-hot core.
       const discGeo = new THREE.CircleGeometry(0.82, 20);
