@@ -66,13 +66,10 @@ export const CFG = {
   fovSpeed: 24,      // extra FOV added as you approach max speed
   fovBoost: 10,      // extra FOV punch while boosting
 
-  // Alternate view modes.
-  cam1Fwd: 1.2,      // 1st-person: metres forward of ship centre (cockpit)
-  cam1Up: 1.0,       // 1st-person: metres above ship centre
+  // 1st-person (cockpit) view.
+  cam1Fwd: 1.2,      // metres forward of ship centre (cockpit)
+  cam1Up: 1.0,       // metres above ship centre
   fovFirst: 92,      // wide, immersive cockpit FOV
-  cam2Dist: 20,      // 2nd-person: metres AHEAD of the ship (looks back)
-  cam2Height: 6.5,   // 2nd-person: metres above
-  fovSecond: 80,
 
   // ---- Post FX / juice -------------------------------------------------
   bloomStrength: 0.95,

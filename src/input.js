@@ -122,19 +122,18 @@ export class Input {
 
   _onKey(e, down) {
     const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
-    // Stop arrows / space from scrolling the page.
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
+    // Stop arrows / space / tab from scrolling or moving focus.
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Tab'].includes(e.key)) {
       e.preventDefault();
     }
     if (down) {
       if (!this.keys.has(k)) {
         if (k === 'Enter' || k === ' ') this._action = true;
         if (k === 'm') this._muteToggled = true;
-        // Camera: 1 = 1st person, 2 = 2nd person, 3 = 3rd person, C = cycle.
+        // Camera: Shift+Tab (or Tab) cycles; 1 = 1st person, 3 = 3rd person, C = cycle.
+        if (k === 'Tab' || k === 'c' || k === 'v') this._camAction = 'cycle';
         if (k === '1') this._camAction = 'first';
-        if (k === '2') this._camAction = 'second';
         if (k === '3') this._camAction = 'third';
-        if (k === 'c' || k === 'v') this._camAction = 'cycle';
       }
       this.keys.add(k);
     } else {

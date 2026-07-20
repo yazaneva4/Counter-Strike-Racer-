@@ -24,7 +24,7 @@ export class HUD {
   }
 
   setCamMode(mode) {
-    const label = { third: '3RD', first: '1ST', second: '2ND' }[mode] || '3RD';
+    const label = { third: '3RD', first: '1ST' }[mode] || '3RD';
     if (this.camIndicator) this.camIndicator.textContent = 'CAM · ' + label;
   }
 
@@ -64,7 +64,7 @@ export class HUD {
          <span><b>&#8592; &#8594;</b> / <b>A D</b> &nbsp;steer</span>
          <span><b>&#8593; &#8595;</b> / <b>W S</b> &nbsp;climb / dive</span>
          <span><b>SPACE</b> / <b>SHIFT</b> &nbsp;boost</span>
-         <span><b>1 2 3</b> / <b>C</b> &nbsp;camera view</span>
+         <span><b>SHIFT+TAB</b> &nbsp;switch camera</span>
          <span>or <b>move the mouse</b> to fly</span>
        </div>
        <div class="controls ctrl-touch">

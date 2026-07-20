@@ -17,8 +17,8 @@ import { HUD } from './hud.js';
 import { Audio } from './audio.js';
 
 const BEST_KEY = 'riftbreak_best';
-const CAM_ORDER = ['third', 'first', 'second'];
-const CAM_LABEL = { third: '3RD PERSON', first: '1ST PERSON', second: '2ND PERSON' };
+const CAM_ORDER = ['third', 'first'];
+const CAM_LABEL = { third: '3RD PERSON', first: '1ST PERSON' };
 
 class Game {
   constructor() {
@@ -330,11 +330,6 @@ class Game {
       desired = shipPos.clone().addScaledVector(fwd, CFG.cam1Fwd).addScaledVector(up, CFG.cam1Up);
       lookTarget = shipPos.clone().addScaledVector(fwd, 60).addScaledVector(up, 2.0);
       modeFov = CFG.fovFirst;
-    } else if (this.cameraMode === 'second') {
-      // Reverse chase: fly ahead of the ship and look back at it.
-      desired = shipPos.clone().addScaledVector(fwd, CFG.cam2Dist).addScaledVector(up, CFG.cam2Height);
-      lookTarget = shipPos.clone().addScaledVector(up, 1.0);
-      modeFov = CFG.fovSecond;
     } else {
       // Third person: behind and above (default chase).
       desired = shipPos.clone().addScaledVector(fwd, -CFG.camDist).addScaledVector(up, CFG.camHeight);
