@@ -15,10 +15,14 @@ import { Particles } from './particles.js';
 import { PostFX } from './postfx.js';
 import { HUD } from './hud.js';
 import { Audio } from './audio.js';
+import { Bots } from './bots.js';
+import { Arena } from './realtime.js';
+import { fetchTop, submitScore, getName, setName } from './leaderboard.js';
 
 const BEST_KEY = 'riftbreak_best';
 const CAM_ORDER = ['third', 'first'];
 const CAM_LABEL = { third: '3RD PERSON', first: '1ST PERSON' };
+const RACE_BOTS = 5;
 
 class Game {
   constructor() {
@@ -41,6 +45,8 @@ class Game {
     this.input = new Input();
     this.hud = new HUD();
     this.audio = new Audio();
+    this.bots = new Bots(this.scene);
+    this.arena = new Arena(this.scene);
 
     this.gates.onResult = (hit, idx) => this._onGate(hit, idx);
 
@@ -60,12 +66,27 @@ class Game {
     this.deadTimer = 0;
     this.time = 0;
     this.cameraMode = 'third';
+    this.mode = 'solo';
+    this.playerName = getName();
+    this.rank = 1;
+    this.fieldSize = 1;
+    this.liveCount = 0;
+    this._submitted = false;
 
     this._resetRun();
     this.ship.setVisible(true);
     this.hud.showMenu(this.best);
     this.hud.setMuted(this.audio.muted);
     this.hud.setCamMode(this.cameraMode);
+
+    // Leaderboard + multiplayer menu wiring.
+    this.hud.setName(this.playerName);
+    this.hud.bindMenu({
+      onName: (v) => { this.playerName = setName(v); },
+      onSolo: () => this._startGame('solo'),
+      onRace: () => this._startGame('race'),
+    });
+    this._refreshLeaderboard();
 
     // Tappable mute (handy on touch, where there's no M key).
     if (this.hud.muteIndicator) {
@@ -106,12 +127,34 @@ class Game {
     this.danger = 0;
   }
 
-  _startGame() {
+  _startGame(mode) {
+    this.mode = mode === 'race' ? 'race' : 'solo';
     this.audio.init();
     this.audio.resume();
     this.input.consumeAction(); // clear any queued press so we start clean
     this._resetRun();
-    this.ship.setVisible(true);
+    this.ship.setVisible(this.cameraMode !== 'first');
+
+    // Lock in the pilot name from the field.
+    const typed = this.hud.getNameValue();
+    if (typed) this.playerName = setName(typed);
+    if (!this.playerName) this.playerName = setName('PLAYER');
+
+    // Set up (or tear down) the rivals for this mode.
+    if (this.mode === 'race') {
+      this.bots.spawn(RACE_BOTS, this.ship.z);
+      this.arena.connect(this.playerName);
+    } else {
+      this.bots.clear();
+      this.arena.disconnect();
+      this.hud.hideRace();
+    }
+
+    this._submitted = false;
+    this.rank = 1;
+    this.fieldSize = 1 + (this.mode === 'race' ? RACE_BOTS : 0);
+    this.liveCount = 0;
+
     this.state = 'playing';
     this.hud.hideOverlay();
     this.audio.boost();
@@ -144,7 +187,35 @@ class Game {
       gates: this.gatesHit,
       best: this.best,
       newBest,
+      mode: this.mode,
+      rank: this.rank,
+      field: this.fieldSize,
     });
+    this._submitScore();
+  }
+
+  // Submit the finished run to the global leaderboard, then refresh it.
+  _submitScore() {
+    if (this._submitted) return;
+    this._submitted = true;
+    if (this.distance < 1) { this.hud.setSubmitStatus(''); return; }
+    this.hud.setSubmitStatus('SAVING SCORE…');
+    submitScore({
+      name: this.playerName || 'PLAYER',
+      distance: this.distance,
+      style: this.style,
+      topSpeed: this.topSpeed,
+      gates: this.gatesHit,
+      mode: this.mode,
+    }).then((ok) => {
+      this.hud.setSubmitStatus(ok ? 'SAVED TO LEADERBOARD' : 'OFFLINE — SCORE NOT SAVED');
+      this._refreshLeaderboard(this.playerName);
+    });
+  }
+
+  async _refreshLeaderboard(highlight) {
+    const scores = await fetchTop(12);
+    this.hud.renderLeaderboard(scores, highlight || this.playerName);
   }
 
   _onGate(hit, idx) {
@@ -226,7 +297,7 @@ class Game {
     this.boostVis += (0 - this.boostVis) * Math.min(1, dt * 4);
     this.danger = 0;
 
-    if (this.input.consumeAction()) this._startGame();
+    if (this.input.consumeAction()) this._startGame(this.mode);
   }
 
   _updatePlaying(dt) {
@@ -287,7 +358,28 @@ class Game {
     this.ship.tailWorld(this._look);
     this.particles.trail(this._look, this.boostVis);
 
+    // Race rivals: AI bots + live players, and your place in the pack.
+    if (this.mode === 'race') {
+      this.bots.update(dt, this.time, this.ship.z, baseSpeed);
+      this.arena.broadcast(this.ship.z, this.ship.u, this.ship.v, this.speed);
+      this.arena.update(this.ship.z);
+      this._computeRank();
+    }
+
     this._pushHud();
+  }
+
+  // Your position among all rivals (bots + live players), by distance.
+  _computeRank() {
+    const pz = this.ship.z;
+    let ahead = 0;
+    let field = 1;
+    for (const z of this.bots.positions()) { field++; if (z > pz) ahead++; }
+    for (const z of this.arena.positions()) { field++; if (z > pz) ahead++; }
+    this.rank = ahead + 1;
+    this.fieldSize = field;
+    this.liveCount = this.arena.count();
+    this.hud.setRace(this.rank, this.fieldSize, this.liveCount);
   }
 
   _updateDead(dt) {
@@ -300,7 +392,13 @@ class Game {
     this.danger = Math.min(1, this.danger + dt * 0.6);
     this.boostVis += (0 - this.boostVis) * Math.min(1, dt * 3);
 
-    if (this.deadTimer > 0.7 && this.input.consumeAction()) this._startGame();
+    // Keep the pack racing on in the background for drama.
+    if (this.mode === 'race') {
+      this.bots.update(dt, this.time, this.ship.z, 60);
+      this.arena.update(this.ship.z);
+    }
+
+    if (this.deadTimer > 0.7 && this.input.consumeAction()) this._startGame(this.mode);
   }
 
   // Switch camera view. `a` is 'cycle' or an explicit mode name.

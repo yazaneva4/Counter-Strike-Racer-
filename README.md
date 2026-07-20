@@ -76,7 +76,20 @@ Then open **http://localhost:8080** and press **Space** (or tap) to launch.
 | Environment | `src/environment.js` | A camera-locked sky dome with a hand-written gradient and a striped burning sun baked into the shader. |
 | Post FX | `src/postfx.js` | A neon glow pass + chromatic aberration, vignette, film grain and the rift-danger red pulse. |
 | Input | `src/input.js` | Keyboard, mouse-steer and touch (floating joystick + boost pad) folded into one set of axes. |
-| Camera / loop / scoring | `src/main.js` | The state machine, boost/rift economy, and the speed-drunk chase camera. |
+| Leaderboard | `src/leaderboard.js` | Global guest leaderboard over Supabase REST (plain `fetch`, no SDK). Submits a finished run and pulls the top scores; fails safe offline. |
+| Bots | `src/bots.js` | AI rivals for Race mode — each flies the corridor at its own pace with gentle rubber-banding so the pack stays in the race. |
+| Live arena | `src/realtime.js` | Live multiplayer over Supabase Realtime broadcast (raw WebSocket, Phoenix protocol). Everyone in Race mode shares one arena and sees each other as ghost craft. |
+| Ghost craft | `src/ghost.js` | The lightweight neon wireframe + name label used for both bots and live players. |
+| Camera / loop / scoring | `src/main.js` | The state machine, boost/rift economy, the speed-drunk multi-view camera, and the SOLO / RACE modes. |
+
+### Online play
+
+- **Modes** — pick **SOLO RUN** (endless time-trial) or **RACE** (AI bots + live players) from the menu after entering a pilot name.
+- **Global leaderboard** — every run is submitted by distance and shown on the menu and game-over screens. Backed by a Supabase table (`csr_scores`) with row-level security and value constraints; the client uses the project's **publishable** key (safe to ship) and reads/writes over REST.
+- **Live multiplayer** — Race mode joins a shared Supabase Realtime channel and broadcasts your ship state ~10×/sec, so anyone else racing at the same time appears as a named ghost. There's no matchmaking — it's one open arena — and it degrades gracefully to "bots only" if the socket can't connect.
+- **Sign-in** — guest names for now; Google sign-in is planned (it needs Google OAuth credentials configured in Supabase).
+
+> The Supabase URL + publishable key live in `src/leaderboard.js`. These are **public client credentials** by design; the data is protected by row-level security on the server.
 
 All tuning lives in **`src/config.js`** — speeds, camera feel, glow, fog, colours.
 

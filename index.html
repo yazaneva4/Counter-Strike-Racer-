@@ -38,6 +38,9 @@
     <div id="muteIndicator" class="mute">SOUND (M)</div>
     <div id="camIndicator" class="cam">CAM &middot; 3RD</div>
 
+    <!-- Race standings (shown during Race mode) -->
+    <div id="raceInfo" class="raceinfo"></div>
+
     <!-- Touch-only on-screen boost pad (shown on touch devices during play) -->
     <button id="boostBtn" aria-label="Boost">BOOST</button>
   </div>
@@ -49,7 +52,29 @@
     <div class="panel">
       <h1 id="overlayTitle"></h1>
       <div id="overlaySub" class="overlay-sub"></div>
+
       <div id="overlayStats" class="overlay-stats"></div>
+
+      <!-- Pilot name + mode selection -->
+      <div id="menuBlock">
+        <div class="namerow">
+          <span class="label">PILOT</span>
+          <input id="menuName" type="text" maxlength="20" autocomplete="off"
+                 autocapitalize="characters" spellcheck="false" placeholder="ENTER NAME" />
+        </div>
+        <div class="modebtns">
+          <button id="btnSolo" class="modebtn">SOLO RUN</button>
+          <button id="btnRace" class="modebtn race">RACE</button>
+        </div>
+        <div id="submitStatus" class="submit-status"></div>
+      </div>
+
+      <!-- Global leaderboard -->
+      <div class="lb-wrap">
+        <div class="lb-title">GLOBAL LEADERBOARD</div>
+        <div id="leaderboard" class="leaderboard"></div>
+      </div>
+
       <div id="overlayHint" class="overlay-hint"></div>
     </div>
     <div class="scanlines"></div>

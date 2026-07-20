@@ -309,6 +309,142 @@ body.touch #hud.active #boostBtn { display: block; }
 }
 .launch b { color: var(--cyan); }
 
+/* -------------------------------------------------- Menu: name + modes --- */
+#menuBlock { display: none; flex-direction: column; align-items: center; gap: 16px; margin-top: 22px; }
+.show.menu #menuBlock, .show.over #menuBlock { display: flex; }
+
+.namerow { display: flex; align-items: center; gap: 12px; }
+.namerow .label { color: var(--cyan); }
+#menuName {
+  width: 240px;
+  max-width: 60vw;
+  padding: 10px 14px;
+  background: rgba(0, 234, 255, 0.06);
+  border: 1px solid rgba(0, 234, 255, 0.5);
+  border-radius: 8px;
+  color: #eaf6ff;
+  font-family: var(--font);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  text-align: center;
+  outline: none;
+  box-shadow: inset 0 0 14px rgba(0, 234, 255, 0.12);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+#menuName:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 16px rgba(0, 234, 255, 0.4), inset 0 0 16px rgba(0, 234, 255, 0.18);
+}
+#menuName::placeholder { color: #4d7488; letter-spacing: 0.12em; }
+
+.modebtns { display: flex; gap: 16px; }
+.modebtn {
+  min-width: 150px;
+  padding: 14px 26px;
+  background: rgba(0, 234, 255, 0.08);
+  border: 2px solid var(--cyan);
+  border-radius: 10px;
+  color: #eaffff;
+  font-family: var(--font);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 0 18px rgba(0, 234, 255, 0.3), inset 0 0 14px rgba(0, 234, 255, 0.12);
+  transition: transform 0.08s ease, box-shadow 0.12s ease, background 0.12s ease;
+}
+.modebtn:hover { transform: translateY(-2px); box-shadow: 0 0 28px rgba(0, 234, 255, 0.55), inset 0 0 18px rgba(0, 234, 255, 0.22); }
+.modebtn:active { transform: translateY(0) scale(0.97); }
+.modebtn.race {
+  border-color: var(--magenta);
+  color: #ffe6fb;
+  background: rgba(255, 43, 191, 0.1);
+  box-shadow: 0 0 18px rgba(255, 43, 191, 0.35), inset 0 0 14px rgba(255, 43, 191, 0.14);
+}
+.modebtn.race:hover { box-shadow: 0 0 30px rgba(255, 43, 191, 0.6), inset 0 0 18px rgba(255, 43, 191, 0.24); }
+
+.submit-status {
+  min-height: 16px;
+  font-size: 13px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  text-shadow: 0 0 10px rgba(255, 211, 110, 0.5);
+}
+
+/* ------------------------------------------------------- Leaderboard --- */
+.lb-wrap { margin-top: 22px; width: min(460px, 88vw); }
+.lb-title {
+  font-size: 12px;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: #7fb6cc;
+  margin-bottom: 10px;
+}
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 34vh;
+  overflow-y: auto;
+  text-align: left;
+}
+.lb-row {
+  display: grid;
+  grid-template-columns: 34px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 15px;
+  letter-spacing: 0.08em;
+}
+.lb-row.me {
+  background: rgba(0, 234, 255, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(0, 234, 255, 0.45);
+}
+.lb-rank { color: #7fb6cc; font-weight: 700; text-align: right; }
+.lb-row:nth-child(1) .lb-rank { color: var(--gold); }
+.lb-row:nth-child(2) .lb-rank { color: #cfe3ee; }
+.lb-row:nth-child(3) .lb-rank { color: var(--ember, #ff5e3a); }
+.lb-name { color: #fff; font-weight: 700; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-dist { color: var(--cyan); font-weight: 700; }
+.lb-dist small { font-size: 0.7em; opacity: 0.7; margin-left: 2px; }
+.lb-mode {
+  font-size: 10px; letter-spacing: 0.14em; color: var(--magenta);
+  border: 1px solid rgba(255, 43, 191, 0.5); border-radius: 4px; padding: 1px 5px;
+}
+.lb-empty { color: #7fb6cc; font-size: 14px; letter-spacing: 0.14em; padding: 14px; text-align: center; }
+
+/* --------------------------------------------------- Race standings --- */
+.raceinfo {
+  position: absolute;
+  top: 92px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 16px;
+  border-radius: 999px;
+  background: rgba(10, 0, 24, 0.5);
+  border: 1px solid rgba(255, 43, 191, 0.45);
+  box-shadow: 0 0 16px rgba(255, 43, 191, 0.3);
+  letter-spacing: 0.1em;
+}
+.raceinfo.show { display: flex; }
+.raceinfo .rank { font-size: 24px; font-weight: 800; color: #fff; text-shadow: 0 0 12px rgba(255, 43, 191, 0.8); }
+.raceinfo .field { font-size: 14px; color: #b9a9d6; }
+.raceinfo .live { color: var(--green); font-weight: 700; }
+
+/* Keep the tall overlay usable on short screens. */
+.panel { max-height: 96vh; overflow-y: auto; }
+
 /* Retro scanlines over the overlay only. */
 .scanlines {
   position: absolute;
@@ -337,4 +473,9 @@ body.touch #hud.active #boostBtn { display: block; }
   .boost { bottom: 24px; }
   #boostBtn { width: 90px; height: 90px; right: 18px; bottom: 62px; font-size: 13px; }
   .controls { font-size: 13px; }
+  .modebtn { min-width: 130px; padding: 12px 18px; font-size: 17px; }
+  #menuName { font-size: 17px; }
+  .raceinfo { top: 104px; }
+  .raceinfo .rank { font-size: 20px; }
+  .leaderboard { max-height: 26vh; }
 }

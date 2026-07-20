@@ -45,6 +45,7 @@ export class Input {
     });
     addEventListener('mousedown', (e) => {
       if (this.touchMode) return;
+      if (uiTarget(e.target)) return;   // menu buttons / name field handle themselves
       // Left button: boost + confirm/launch. Right button is handled below.
       if (e.button === 0) { this.pointerBoost = true; this._action = true; }
     });
@@ -59,7 +60,7 @@ export class Input {
     // A tap or click always counts as "confirm" (launch / restart). Taps
     // synthesise a click, so this guarantees launch works on every device even
     // if a synthetic touch event is missed.
-    addEventListener('click', () => { this._action = true; });
+    addEventListener('click', (e) => { if (!uiTarget(e.target)) this._action = true; });
 
     // ---- On-screen boost pad ------------------------------------------
     const boostBtn = document.getElementById('boostBtn');
@@ -78,7 +79,7 @@ export class Input {
     // ---- Touch steering (floating joystick) ---------------------------
     addEventListener('touchstart', (e) => {
       this.touchMode = true;
-      this._action = true;
+      if (!uiTarget(e.target)) this._action = true;   // not when tapping the menu UI
       for (const t of e.changedTouches) {
         if (this._onBoostPad(t)) continue;      // that finger drives the pad
         if (this.steerId === null) {
@@ -127,6 +128,8 @@ export class Input {
   }
 
   _onKey(e, down) {
+    // Ignore game keys while the player is typing in a text field (name entry).
+    if (isFormField(e.target)) return;
     const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
     // Stop arrows / space / tab from scrolling or moving focus.
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Tab'].includes(e.key)) {
@@ -200,4 +203,18 @@ function clampGain(v) {
   const dead = 0.05;
   if (Math.abs(v) < dead) return 0;
   return THREE.MathUtils.clamp(v * 1.35, -1, 1);
+}
+
+// A text field the player is typing into -- game keys should be ignored.
+function isFormField(t) {
+  return !!t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+}
+
+// Interactive HUD/menu chrome -- a click/tap here shouldn't launch or boost.
+function uiTarget(t) {
+  if (!t) return false;
+  const tag = t.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'BUTTON' || tag === 'SELECT' || tag === 'LABEL') return true;
+  return typeof t.closest === 'function'
+    && !!t.closest('#menuBlock, #boostBtn, #muteIndicator, #camIndicator, #leaderboard');
 }
