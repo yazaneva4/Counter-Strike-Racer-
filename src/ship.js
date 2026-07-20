@@ -38,6 +38,10 @@ export class Ship {
 
     // Overall size in the corridor (kept small so it reads as a nimble dart).
     this.body.scale.setScalar(0.42);
+    // Face the craft's FRONT (nose + cockpit) toward the chase camera, so you
+    // see it head-on like the concept art. Flight/steering are unaffected --
+    // only the visual model is turned around; engines now point away.
+    this.body.rotation.y = Math.PI;
 
     this._tail = new THREE.Vector3();
     this._pos = new THREE.Vector3();
@@ -361,9 +365,10 @@ export class Ship {
   worldPos(out = this._pos) { return worldFromLocal(this.z, this.u, this.v, out); }
   forward(out = this._fwd) { return tangent(this.z, this.u, this.v, out); }
 
-  // World position of the engines (for the exhaust trail).
+  // World position of the engines (for the exhaust trail). The model is turned
+  // to face the camera, so the engines are on the far (-Z) side now.
   tailWorld(out = this._tail) {
-    return this.group.localToWorld(out.set(0, -0.28, 3.4));
+    return this.group.localToWorld(out.set(0, -0.28, -3.4));
   }
 
   setVisible(v) { this.group.visible = v; }
