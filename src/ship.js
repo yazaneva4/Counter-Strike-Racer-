@@ -122,15 +122,12 @@ export class Ship {
   }
 
   _buildWings() {
-    // Long, thin, nearly-straight wings that end in a forked dart tip -- a
-    // forward barb, an outboard spike and an aft barb (the "><" from the art).
+    // Long, thin, nearly-straight wings that taper to a single sharp tip.
     // Shape space: X = span outboard, Y = chord (becomes +Z = aft).
     const pts = [
-      [0.4, -1.2], [3.5, -0.8], [6.5, -0.55], [8.5, -0.5],
-      [11.6, -1.15], // forward prong tip
-      [10.3, 0.0],   // notch between the prongs (the "><" fishtail)
-      [11.6, 1.15],  // aft prong tip
-      [8.5, 0.5], [6.5, 0.6], [3.5, 0.9], [0.4, 1.2],
+      [0.4, -1.2], [3.5, -0.8], [6.5, -0.55], [9.0, -0.4],
+      [11.7, 0.0],   // single straight tip (no fork)
+      [9.0, 0.4], [6.5, 0.6], [3.5, 0.9], [0.4, 1.2],
     ];
     const shape = new THREE.Shape();
     shape.moveTo(pts[0][0], pts[0][1]);
