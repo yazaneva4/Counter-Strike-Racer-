@@ -19,7 +19,13 @@ export class HUD {
     this.overlayHint = this.$('overlayHint');
     this.popups = this.$('popups');
     this.muteIndicator = this.$('muteIndicator');
+    this.camIndicator = this.$('camIndicator');
     this.hudRoot = this.$('hud');
+  }
+
+  setCamMode(mode) {
+    const label = { third: '3RD', first: '1ST', second: '2ND' }[mode] || '3RD';
+    if (this.camIndicator) this.camIndicator.textContent = 'CAM · ' + label;
   }
 
   setStats(s) {
@@ -58,11 +64,13 @@ export class HUD {
          <span><b>&#8592; &#8594;</b> / <b>A D</b> &nbsp;steer</span>
          <span><b>&#8593; &#8595;</b> / <b>W S</b> &nbsp;climb / dive</span>
          <span><b>SPACE</b> / <b>SHIFT</b> &nbsp;boost</span>
+         <span><b>1 2 3</b> / <b>C</b> &nbsp;camera view</span>
          <span>or <b>move the mouse</b> to fly</span>
        </div>
        <div class="controls ctrl-touch">
          <span><b>Drag</b> anywhere &nbsp;to steer &amp; fly</span>
          <span>hold the <b>BOOST</b> pad &nbsp;to accelerate</span>
+         <span>tap <b>CAM</b> &nbsp;to switch view</span>
        </div>
        <div class="launch"><span class="desktop-only">Press <b>SPACE</b> or click to launch</span><span class="touch-only">Tap to launch</span></div>`;
     this.hudRoot.classList.remove('active');

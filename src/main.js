@@ -17,6 +17,8 @@ import { HUD } from './hud.js';
 import { Audio } from './audio.js';
 
 const BEST_KEY = 'riftbreak_best';
+const CAM_ORDER = ['third', 'first', 'second'];
+const CAM_LABEL = { third: '3RD PERSON', first: '1ST PERSON', second: '2ND PERSON' };
 
 class Game {
   constructor() {
@@ -57,11 +59,13 @@ class Game {
     this.impulse = 0;
     this.deadTimer = 0;
     this.time = 0;
+    this.cameraMode = 'third';
 
     this._resetRun();
     this.ship.setVisible(true);
     this.hud.showMenu(this.best);
     this.hud.setMuted(this.audio.muted);
+    this.hud.setCamMode(this.cameraMode);
 
     // Tappable mute (handy on touch, where there's no M key).
     if (this.hud.muteIndicator) {
@@ -69,6 +73,14 @@ class Game {
         e.stopPropagation();
         this.audio.init();
         this.hud.setMuted(this.audio.toggleMute());
+      });
+    }
+
+    // Tappable camera switch (cycles views; handy on touch).
+    if (this.hud.camIndicator) {
+      this.hud.camIndicator.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._applyCamAction('cycle');
       });
     }
 
@@ -175,9 +187,15 @@ class Game {
       this.hud.setMuted(this.audio.toggleMute());
     }
 
+    const camReq = this.input.consumeCamera();
+    if (camReq) this._applyCamAction(camReq);
+
     if (this.state === 'menu') this._updateMenu(dt);
     else if (this.state === 'playing') this._updatePlaying(dt);
     else this._updateDead(dt);
+
+    // The ship is hidden in the cockpit (1st-person) view, and after a crash.
+    if (this.state !== 'dead') this.ship.setVisible(this.cameraMode !== 'first');
 
     // Shared visual updates.
     this.canyon.update(this.ship.z);
@@ -285,14 +303,44 @@ class Game {
     if (this.deadTimer > 0.7 && this.input.consumeAction()) this._startGame();
   }
 
+  // Switch camera view. `a` is 'cycle' or an explicit mode name.
+  _applyCamAction(a) {
+    if (a === 'cycle') {
+      const i = CAM_ORDER.indexOf(this.cameraMode);
+      this.cameraMode = CAM_ORDER[(i + 1) % CAM_ORDER.length];
+    } else if (CAM_ORDER.includes(a)) {
+      if (a === this.cameraMode) return;
+      this.cameraMode = a;
+    } else {
+      return;
+    }
+    this.hud.setCamMode(this.cameraMode);
+    this.hud.popup(CAM_LABEL[this.cameraMode], '#00eaff');
+  }
+
   _updateCamera(dt) {
     const shipPos = this.ship.worldPos(this._look).clone();
     const fwd = this.ship.forward().clone();
     const { up } = localBasis(this.ship.z, new THREE.Vector3(), this._up);
 
-    const desired = shipPos.clone()
-      .addScaledVector(fwd, -CFG.camDist)
-      .addScaledVector(up, CFG.camHeight);
+    // Per-mode eye position, look target and base FOV.
+    let desired, lookTarget, modeFov;
+    if (this.cameraMode === 'first') {
+      // Cockpit: sit just above the nose and look far down the corridor.
+      desired = shipPos.clone().addScaledVector(fwd, CFG.cam1Fwd).addScaledVector(up, CFG.cam1Up);
+      lookTarget = shipPos.clone().addScaledVector(fwd, 60).addScaledVector(up, 2.0);
+      modeFov = CFG.fovFirst;
+    } else if (this.cameraMode === 'second') {
+      // Reverse chase: fly ahead of the ship and look back at it.
+      desired = shipPos.clone().addScaledVector(fwd, CFG.cam2Dist).addScaledVector(up, CFG.cam2Height);
+      lookTarget = shipPos.clone().addScaledVector(up, 1.0);
+      modeFov = CFG.fovSecond;
+    } else {
+      // Third person: behind and above (default chase).
+      desired = shipPos.clone().addScaledVector(fwd, -CFG.camDist).addScaledVector(up, CFG.camHeight);
+      lookTarget = shipPos.clone().addScaledVector(fwd, CFG.camLookAhead).addScaledVector(up, CFG.camLookUp);
+      modeFov = CFG.fovBase;
+    }
 
     const k = 1 - Math.exp(-CFG.camLerp * dt);
     this.camPos.lerp(desired, k);
@@ -306,12 +354,11 @@ class Game {
 
     this.camera.position.copy(this.camPos).add(this._rand);
     this.camera.up.copy(up);
-    this._look.copy(shipPos).addScaledVector(fwd, CFG.camLookAhead).addScaledVector(up, CFG.camLookUp);
-    this.camera.lookAt(this._look);
+    this.camera.lookAt(lookTarget);
 
-    // FOV surge.
+    // FOV surge relative to the current mode's base.
     this.fovKick *= Math.max(0, 1 - dt * 3);
-    const targetFov = CFG.fovBase + speed01 * CFG.fovSpeed + this.boostVis * CFG.fovBoost + this.fovKick;
+    const targetFov = modeFov + speed01 * CFG.fovSpeed + this.boostVis * CFG.fovBoost + this.fovKick;
     this.camera.fov += (targetFov - this.camera.fov) * Math.min(1, dt * 8);
     this.camera.updateProjectionMatrix();
   }

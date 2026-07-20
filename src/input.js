@@ -27,6 +27,7 @@ export class Input {
 
     this._action = false;   // consumable "confirm / launch / restart"
     this._muteToggled = false;
+    this._camAction = null; // consumable camera request: 'cycle'|'first'|'second'|'third'
 
     if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
       document.body.classList.add('touch');
@@ -129,6 +130,11 @@ export class Input {
       if (!this.keys.has(k)) {
         if (k === 'Enter' || k === ' ') this._action = true;
         if (k === 'm') this._muteToggled = true;
+        // Camera: 1 = 1st person, 2 = 2nd person, 3 = 3rd person, C = cycle.
+        if (k === '1') this._camAction = 'first';
+        if (k === '2') this._camAction = 'second';
+        if (k === '3') this._camAction = 'third';
+        if (k === 'c' || k === 'v') this._camAction = 'cycle';
       }
       this.keys.add(k);
     } else {
@@ -173,6 +179,13 @@ export class Input {
     const m = this._muteToggled;
     this._muteToggled = false;
     return m;
+  }
+
+  // Returns a pending camera request ('cycle'|'first'|'second'|'third') once, or null.
+  consumeCamera() {
+    const c = this._camAction;
+    this._camAction = null;
+    return c;
   }
 }
 

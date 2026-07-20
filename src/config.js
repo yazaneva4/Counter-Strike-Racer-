@@ -57,14 +57,22 @@ export const CFG = {
   grazeCooldown: 0.14,
 
   // ---- Camera ----------------------------------------------------------
-  camDist: 15,
-  camHeight: 5.2,
+  camDist: 15,       // 3rd-person: metres behind the ship
+  camHeight: 5.2,    // 3rd-person: metres above
   camLookAhead: 34,
   camLookUp: 2.5,
   camLerp: 7.5,      // positional smoothing (higher = tighter)
   fovBase: 74,
   fovSpeed: 24,      // extra FOV added as you approach max speed
   fovBoost: 10,      // extra FOV punch while boosting
+
+  // Alternate view modes.
+  cam1Fwd: 1.2,      // 1st-person: metres forward of ship centre (cockpit)
+  cam1Up: 1.0,       // 1st-person: metres above ship centre
+  fovFirst: 92,      // wide, immersive cockpit FOV
+  cam2Dist: 20,      // 2nd-person: metres AHEAD of the ship (looks back)
+  cam2Height: 6.5,   // 2nd-person: metres above
+  fovSecond: 80,
 
   // ---- Post FX / juice -------------------------------------------------
   bloomStrength: 0.95,
