@@ -64,7 +64,7 @@ export class HUD {
          <span><b>&#8592; &#8594;</b> / <b>A D</b> &nbsp;steer</span>
          <span><b>&#8593; &#8595;</b> / <b>W S</b> &nbsp;climb / dive</span>
          <span><b>SPACE</b> / <b>SHIFT</b> &nbsp;boost</span>
-         <span><b>SHIFT+TAB</b> &nbsp;switch camera</span>
+         <span><b>SHIFT+TAB</b> / <b>right-click</b> &nbsp;switch camera</span>
          <span>or <b>move the mouse</b> to fly</span>
        </div>
        <div class="controls ctrl-touch">

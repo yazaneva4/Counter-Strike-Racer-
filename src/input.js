@@ -45,10 +45,16 @@ export class Input {
     });
     addEventListener('mousedown', (e) => {
       if (this.touchMode) return;
-      if (e.button === 0) this.pointerBoost = true;
-      this._action = true;
+      // Left button: boost + confirm/launch. Right button is handled below.
+      if (e.button === 0) { this.pointerBoost = true; this._action = true; }
     });
     addEventListener('mouseup', () => { this.pointerBoost = false; });
+
+    // Right-click cycles the camera view (and never opens the context menu).
+    addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      if (!this.touchMode) this._camAction = 'cycle';
+    });
 
     // A tap or click always counts as "confirm" (launch / restart). Taps
     // synthesise a click, so this guarantees launch works on every device even
@@ -130,8 +136,8 @@ export class Input {
       if (!this.keys.has(k)) {
         if (k === 'Enter' || k === ' ') this._action = true;
         if (k === 'm') this._muteToggled = true;
-        // Camera: Shift+Tab (or Tab) cycles; 1 = 1st person, 3 = 3rd person, C = cycle.
-        if (k === 'Tab' || k === 'c' || k === 'v') this._camAction = 'cycle';
+        // Camera: Shift+Tab (or Tab) cycles; 1 = 1st person, 3 = 3rd person.
+        if (k === 'Tab') this._camAction = 'cycle';
         if (k === '1') this._camAction = 'first';
         if (k === '3') this._camAction = 'third';
       }
