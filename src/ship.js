@@ -37,7 +37,7 @@ export class Ship {
     this._buildFins();
 
     // Overall size in the corridor (kept small so it reads as a nimble dart).
-    this.body.scale.setScalar(0.55);
+    this.body.scale.setScalar(0.42);
 
     this._tail = new THREE.Vector3();
     this._pos = new THREE.Vector3();
@@ -126,11 +126,11 @@ export class Ship {
     // forward barb, an outboard spike and an aft barb (the "><" from the art).
     // Shape space: X = span outboard, Y = chord (becomes +Z = aft).
     const pts = [
-      [0.4, -1.3], [3.5, -0.85], [6.5, -0.6], [8.6, -0.6],
-      [9.7, -1.55],  // forward barb
-      [11.6, 0.0],   // outboard spike
-      [9.7, 1.55],   // aft barb
-      [8.6, 0.6], [6.5, 0.65], [3.5, 0.95], [0.4, 1.3],
+      [0.4, -1.2], [3.5, -0.8], [6.5, -0.55], [8.5, -0.5],
+      [11.6, -1.15], // forward prong tip
+      [10.3, 0.0],   // notch between the prongs (the "><" fishtail)
+      [11.6, 1.15],  // aft prong tip
+      [8.5, 0.5], [6.5, 0.6], [3.5, 0.9], [0.4, 1.2],
     ];
     const shape = new THREE.Shape();
     shape.moveTo(pts[0][0], pts[0][1]);
@@ -154,26 +154,26 @@ export class Ship {
       const wing = new THREE.Mesh(wingGeo, wingMat);
       wing.scale.x = dir;                // mirror for the left wing
       wing.position.set(dir * 1.1, 0.05, 0.2);
-      wing.rotation.z = dir * 0.08;      // gentle dihedral (tips up)
+      wing.rotation.z = dir * 0.05;      // nearly flat, just a hint of dihedral
       this.body.add(wing);
       wing.add(neon(wingGeo, COL_MAGENTA, 0.5)); // subtle full outline
 
-      // Magenta neon strip along the TOP leading edge, running the full span.
+      // Magenta neon strip along the TOP leading edge, running out to the tip.
       const top = new THREE.Mesh(
-        new THREE.BoxGeometry(10.9, 0.09, 0.5),
+        new THREE.BoxGeometry(11.3, 0.09, 0.5),
         new THREE.MeshBasicMaterial({ color: COL_MAGENTA, transparent: true, opacity: 0.95,
           blending: THREE.AdditiveBlending, depthWrite: false }));
-      top.position.set(dir * 5.6, 0.15, -0.42);
-      top.rotation.y = dir * -0.06;
+      top.position.set(dir * 5.75, 0.15, -0.4);
+      top.rotation.y = dir * -0.05;
       wing.add(top);
 
-      // Cyan neon strip along the underside/trailing edge, full span.
+      // Cyan neon strip along the underside/trailing edge, out to the tip.
       const bot = new THREE.Mesh(
-        new THREE.BoxGeometry(10.4, 0.09, 0.5),
+        new THREE.BoxGeometry(11.0, 0.09, 0.5),
         new THREE.MeshBasicMaterial({ color: COL_CYAN, transparent: true, opacity: 0.9,
           blending: THREE.AdditiveBlending, depthWrite: false }));
-      bot.position.set(dir * 5.3, -0.15, 0.5);
-      bot.rotation.y = dir * -0.06;
+      bot.position.set(dir * 5.6, -0.15, 0.5);
+      bot.rotation.y = dir * -0.05;
       wing.add(bot);
     }
   }
