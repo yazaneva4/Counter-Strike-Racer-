@@ -29,9 +29,6 @@ export class HUD {
     this.submitStatus = this.$('submitStatus');
     this.leaderboard = this.$('leaderboard');
     this.raceInfo = this.$('raceInfo');
-    this.btnGoogle = this.$('btnGoogle');
-    this.authUser = this.$('authUser');
-    this.btnSignOut = this.$('btnSignOut');
   }
 
   setCamMode(mode) {
@@ -43,30 +40,16 @@ export class HUD {
   setName(name) { if (this.menuName) this.menuName.value = name || ''; }
   getNameValue() { return this.menuName ? this.menuName.value.trim() : ''; }
 
-  bindMenu({ onName, onSolo, onRace, onGoogle, onSignOut }) {
+  bindMenu({ onName, onCommit, onSolo, onRace }) {
     if (this.menuName) {
-      const push = () => onName && onName(this.menuName.value);
-      this.menuName.addEventListener('input', push);
-      this.menuName.addEventListener('change', push);
+      this.menuName.addEventListener('input', () => onName && onName(this.menuName.value));
+      this.menuName.addEventListener('change', () => onCommit && onCommit(this.menuName.value));
       this.menuName.addEventListener('click', (e) => e.stopPropagation());
+      this.menuName.addEventListener('keydown', (e) => { if (e.key === 'Enter') this.menuName.blur(); });
     }
     const go = (fn) => (e) => { e.stopPropagation(); if (this.menuName) this.menuName.blur(); fn && fn(); };
     if (this.btnSolo) this.btnSolo.addEventListener('click', go(onSolo));
     if (this.btnRace) this.btnRace.addEventListener('click', go(onRace));
-    if (this.btnGoogle) this.btnGoogle.addEventListener('click', go(onGoogle));
-    if (this.btnSignOut) this.btnSignOut.addEventListener('click', go(onSignOut));
-  }
-
-  // Reflect the signed-in Google user (or guest when null).
-  setUser(user) {
-    const on = !!user;
-    if (this.btnGoogle) this.btnGoogle.style.display = on ? 'none' : '';
-    if (this.btnSignOut) this.btnSignOut.style.display = on ? '' : 'none';
-    if (this.authUser) this.authUser.textContent = on ? `SIGNED IN · ${user.name}` : '';
-    if (this.menuName) {
-      this.menuName.disabled = on;
-      this.menuName.classList.toggle('locked', on);
-    }
   }
 
   // ---- Live race standings ---------------------------------------------
@@ -85,17 +68,14 @@ export class HUD {
   // ---- Leaderboard -----------------------------------------------------
   setSubmitStatus(text) { if (this.submitStatus) this.submitStatus.textContent = text || ''; }
 
-  renderLeaderboard(scores, highlight) {
+  renderLeaderboard(scores, myId) {
     if (!this.leaderboard) return;
     if (!scores || scores.length === 0) {
       this.leaderboard.innerHTML = '<div class="lb-empty">No scores yet — set the first!</div>';
       return;
     }
-    const hi = (highlight || '').toUpperCase();
-    let seenMe = false;
     this.leaderboard.innerHTML = scores.map((s, i) => {
-      const isMe = !seenMe && s.name && s.name.toUpperCase() === hi;
-      if (isMe) seenMe = true;
+      const isMe = myId && s.player_id === myId;   // by stable id, not name
       const mode = s.mode === 'race' ? '<span class="lb-mode">RACE</span>' : '';
       return `<div class="lb-row${isMe ? ' me' : ''}">
           <span class="lb-rank">${i + 1}</span>

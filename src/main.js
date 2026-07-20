@@ -18,8 +18,7 @@ import { Audio } from './audio.js';
 import { Bots } from './bots.js';
 import { Arena } from './realtime.js';
 import { Finish } from './finish.js';
-import { fetchTop, submitScore, getName, setName } from './leaderboard.js';
-import { signInWithGoogle, handleRedirect, storedUser, signOut } from './auth.js';
+import { fetchTop, submitScore, getName, setName, pushName, getPlayerId } from './leaderboard.js';
 
 const BEST_KEY = 'riftbreak_best';
 const CAM_ORDER = ['third', 'first'];
@@ -77,7 +76,6 @@ class Game {
     this._submitted = false;
     this.raceTime = 0;
     this.won = false;
-    this.user = null;   // signed-in Google user, or null (guest)
 
     this._resetRun();
     this.ship.setVisible(true);
@@ -85,36 +83,20 @@ class Game {
     this.hud.setMuted(this.audio.muted);
     this.hud.setCamMode(this.cameraMode);
 
-    // Leaderboard + multiplayer + sign-in menu wiring.
+    // Leaderboard + multiplayer menu wiring.
     this.hud.setName(this.playerName);
     this.hud.bindMenu({
-      onName: (v) => { if (!this.user) this.playerName = setName(v); },
+      onName: (v) => { this.playerName = setName(v); },
+      onCommit: (v) => {
+        this.playerName = setName(v);
+        pushName(this.playerName);                 // carry existing scores to the new name
+        this._refreshLeaderboard(this.playerName);
+      },
       onSolo: () => this._startGame('solo'),
       onRace: () => this._startGame('race'),
-      onGoogle: () => signInWithGoogle(),
-      onSignOut: () => this._signOut(),
     });
 
-    // Resolve a signed-in Google user: a stored session, then any OAuth redirect.
-    const stored = storedUser();
-    if (stored) this._applyUser(stored);
-    handleRedirect().then((u) => { if (u) this._applyUser(u); this._refreshLeaderboard(); });
-
     this._refreshLeaderboard();
-  }
-
-  _applyUser(user) {
-    if (!user) return;
-    this.user = user;
-    this.playerName = setName(user.name);
-    this.hud.setName(this.playerName);
-    this.hud.setUser(user);
-  }
-
-  _signOut() {
-    signOut();
-    this.user = null;
-    this.hud.setUser(null);
 
     // Tappable mute (handy on touch, where there's no M key).
     if (this.hud.muteIndicator) {
@@ -246,9 +228,9 @@ class Game {
     });
   }
 
-  async _refreshLeaderboard(highlight) {
+  async _refreshLeaderboard() {
     const scores = await fetchTop(12);
-    this.hud.renderLeaderboard(scores, highlight || this.playerName);
+    this.hud.renderLeaderboard(scores, getPlayerId());
   }
 
   _onGate(hit, idx) {
