@@ -339,10 +339,10 @@ body.touch #hud.active #boostBtn { display: block; }
 }
 #menuName::placeholder { color: #4d7488; letter-spacing: 0.12em; }
 
-.modebtns { display: flex; gap: 16px; }
+.modebtns { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
 .modebtn {
-  min-width: 150px;
-  padding: 14px 26px;
+  min-width: 132px;
+  padding: 13px 22px;
   background: rgba(0, 234, 255, 0.08);
   border: 2px solid var(--cyan);
   border-radius: 10px;
@@ -366,6 +366,17 @@ body.touch #hud.active #boostBtn { display: block; }
   box-shadow: 0 0 18px rgba(255, 43, 191, 0.35), inset 0 0 14px rgba(255, 43, 191, 0.14);
 }
 .modebtn.race:hover { box-shadow: 0 0 30px rgba(255, 43, 191, 0.6), inset 0 0 18px rgba(255, 43, 191, 0.24); }
+.modebtn.live {
+  border-color: var(--green);
+  color: #dfffe9;
+  background: rgba(57, 255, 138, 0.1);
+  box-shadow: 0 0 18px rgba(57, 255, 138, 0.32), inset 0 0 14px rgba(57, 255, 138, 0.14);
+}
+.modebtn.live:hover { box-shadow: 0 0 30px rgba(57, 255, 138, 0.55), inset 0 0 18px rgba(57, 255, 138, 0.22); }
+
+/* Bot Race has no boost -- hide the meter and the touch pad. */
+#hud.no-boost .meter.boost { display: none; }
+body.touch #hud.no-boost.active #boostBtn { display: none; }
 
 .submit-status {
   min-height: 16px;

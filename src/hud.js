@@ -25,10 +25,12 @@ export class HUD {
     // Menu / leaderboard / race chrome.
     this.menuName = this.$('menuName');
     this.btnSolo = this.$('btnSolo');
-    this.btnRace = this.$('btnRace');
+    this.btnBots = this.$('btnBots');
+    this.btnLive = this.$('btnLive');
     this.submitStatus = this.$('submitStatus');
     this.leaderboard = this.$('leaderboard');
     this.raceInfo = this.$('raceInfo');
+    this.boostMeter = document.querySelector('.meter.boost');
   }
 
   setCamMode(mode) {
@@ -40,7 +42,7 @@ export class HUD {
   setName(name) { if (this.menuName) this.menuName.value = name || ''; }
   getNameValue() { return this.menuName ? this.menuName.value.trim() : ''; }
 
-  bindMenu({ onName, onCommit, onSolo, onRace }) {
+  bindMenu({ onName, onCommit, onSolo, onBots, onLive }) {
     if (this.menuName) {
       this.menuName.addEventListener('input', () => onName && onName(this.menuName.value));
       this.menuName.addEventListener('change', () => onCommit && onCommit(this.menuName.value));
@@ -49,7 +51,13 @@ export class HUD {
     }
     const go = (fn) => (e) => { e.stopPropagation(); if (this.menuName) this.menuName.blur(); fn && fn(); };
     if (this.btnSolo) this.btnSolo.addEventListener('click', go(onSolo));
-    if (this.btnRace) this.btnRace.addEventListener('click', go(onRace));
+    if (this.btnBots) this.btnBots.addEventListener('click', go(onBots));
+    if (this.btnLive) this.btnLive.addEventListener('click', go(onLive));
+  }
+
+  // Hide the boost meter + pad when boost is disabled (Bot Race).
+  setBoostEnabled(on) {
+    if (this.hudRoot) this.hudRoot.classList.toggle('no-boost', !on);
   }
 
   // ---- Live race standings ---------------------------------------------
@@ -131,7 +139,7 @@ export class HUD {
          <span>hold the <b>BOOST</b> pad &nbsp;to accelerate</span>
          <span>tap <b>CAM</b> &nbsp;to switch view</span>
        </div>
-       <div class="launch">Pick <b>SOLO</b> or <b>RACE</b><span class="desktop-only"> — or press <b>SPACE</b></span> to launch</div>`;
+       <div class="launch">Pick <b>SOLO</b>, <b>BOT RACE</b> or <b>LIVE RACE</b><span class="desktop-only"> — or <b>SPACE</b> for Solo</span></div>`;
     this.hudRoot.classList.remove('active');
   }
 

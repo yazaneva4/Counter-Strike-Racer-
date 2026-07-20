@@ -93,7 +93,8 @@ class Game {
         this._refreshLeaderboard(this.playerName);
       },
       onSolo: () => this._startGame('solo'),
-      onRace: () => this._startGame('race'),
+      onBots: () => this._startGame('bots'),
+      onLive: () => this._startGame('live'),
     });
 
     this._refreshLeaderboard();
@@ -139,8 +140,12 @@ class Game {
     this.won = false;
   }
 
+  // 'bots' (AI race, no boost) and 'live' (real-time race) are both races.
+  _isRace() { return this.mode === 'bots' || this.mode === 'live'; }
+  _boostAllowed() { return this.mode !== 'bots'; }
+
   _startGame(mode) {
-    this.mode = mode === 'race' ? 'race' : 'solo';
+    this.mode = (mode === 'bots' || mode === 'live') ? mode : 'solo';
     this.audio.init();
     this.audio.resume();
     this.input.consumeAction(); // clear any queued press so we start clean
@@ -152,22 +157,28 @@ class Game {
     if (typed) this.playerName = setName(typed);
     if (!this.playerName) this.playerName = setName('PLAYER');
 
-    // Set up (or tear down) the rivals + finish line for this mode.
-    if (this.mode === 'race') {
-      this.bots.spawn(RACE_BOTS, this.ship.z);
-      this.arena.connect(this.playerName);
+    // Rivals + finish line for this mode.
+    this.bots.clear();
+    this.arena.disconnect();
+    if (this.mode === 'bots') {
+      this.bots.spawn(RACE_BOTS, this.ship.z);        // AI rivals only
+      this.finish.place(CFG.raceFinish);
+      this.finish.setVisible(true);
+    } else if (this.mode === 'live') {
+      this.arena.connect(this.playerName);            // real players only
       this.finish.place(CFG.raceFinish);
       this.finish.setVisible(true);
     } else {
-      this.bots.clear();
-      this.arena.disconnect();
       this.finish.setVisible(false);
       this.hud.hideRace();
     }
 
+    // Boost is disabled in Bot Race.
+    this.hud.setBoostEnabled(this._boostAllowed());
+
     this._submitted = false;
     this.rank = 1;
-    this.fieldSize = 1 + (this.mode === 'race' ? RACE_BOTS : 0);
+    this.fieldSize = 1 + (this.mode === 'bots' ? RACE_BOTS : 0);
     this.liveCount = 0;
 
     this.state = 'playing';
@@ -202,7 +213,7 @@ class Game {
       gates: this.gatesHit,
       best: this.best,
       newBest,
-      mode: this.mode,
+      mode: this._isRace() ? 'race' : 'solo',
       rank: this.rank,
       field: this.fieldSize,
     });
@@ -221,7 +232,7 @@ class Game {
       style: this.style,
       topSpeed: this.topSpeed,
       gates: this.gatesHit,
-      mode: this.mode,
+      mode: this._isRace() ? 'race' : 'solo',
     }).then((ok) => {
       this.hud.setSubmitStatus(ok ? 'SAVED TO LEADERBOARD' : 'OFFLINE — SCORE NOT SAVED');
       this._refreshLeaderboard(this.playerName);
@@ -320,7 +331,7 @@ class Game {
     this.rift.mesh.visible = true;
 
     // Boost economy.
-    const wantBoost = this.input.isBoost() && this.boost > 0;
+    const wantBoost = this._boostAllowed() && this.input.isBoost() && this.boost > 0;
     if (wantBoost) this.boost = Math.max(0, this.boost - CFG.boostDrain * dt);
     else this.boost = Math.min(CFG.boostMax, this.boost + CFG.boostRegen * dt);
     this.boostVis += ((wantBoost ? 1 : 0) - this.boostVis) * Math.min(1, dt * 6);
@@ -375,7 +386,7 @@ class Game {
     this.particles.trail(this._look, this.boostVis);
 
     // Race rivals: AI bots + live players, and your place in the pack.
-    if (this.mode === 'race') {
+    if (this._isRace()) {
       this.raceTime += dt;
       this.bots.update(dt, this.time, this.ship.z, baseSpeed);
       this.arena.broadcast(this.ship.z, this.ship.u, this.ship.v, this.speed);
@@ -454,7 +465,7 @@ class Game {
     }
 
     // Keep the pack racing on in the background for drama.
-    if (this.mode === 'race') {
+    if (this._isRace()) {
       this.bots.update(dt, this.time, this.ship.z, 60);
       this.arena.update(this.ship.z);
     }
