@@ -7,9 +7,10 @@ import * as THREE from 'three';
 import { worldFromLocal, tangent } from './path.js';
 
 export class Ghost {
-  constructor(scene, color, name) {
+  constructor(scene, color, name, tag = '') {
     this.scene = scene;
     this.color = new THREE.Color(color);
+    this.tag = tag;          // e.g. 'BOT' -- real players have no tag
     this.group = new THREE.Group();
 
     // Wireframe hull.
@@ -32,7 +33,7 @@ export class Ghost {
     this.group.add(eng);
 
     // Floating name tag.
-    this._label = makeLabel(name, this.color);
+    this._label = makeLabel(name, this.color, tag);
     this._label.position.set(0, 2.4, 0.5);
     this.group.add(this._label);
     this._labelName = name;
@@ -47,7 +48,7 @@ export class Ghost {
   setName(name) {
     if (name === this._labelName) return;
     this._labelName = name;
-    drawLabel(this._label.material.map, name, this.color);
+    drawLabel(this._label.material.map, name, this.color, this.tag);
     this._label.material.map.needsUpdate = true;
   }
 
@@ -79,25 +80,29 @@ function neonEdges(geo, color, opacity) {
   return new THREE.LineSegments(new THREE.EdgesGeometry(geo, 20), mat);
 }
 
-function makeLabel(name, color) {
+function makeLabel(name, color, tag) {
   const canvas = document.createElement('canvas');
   canvas.width = 256;
-  canvas.height = 64;
+  canvas.height = 80;
   const tex = new THREE.CanvasTexture(canvas);
-  drawLabel(tex, name, color);
+  drawLabel(tex, name, color, tag);
   const mat = new THREE.SpriteMaterial({
     map: tex, transparent: true, depthWrite: false, depthTest: false,
   });
   const sprite = new THREE.Sprite(mat);
-  sprite.scale.set(5.0, 1.25, 1);
+  sprite.scale.set(5.0, 1.56, 1);
   return sprite;
 }
 
-function drawLabel(tex, name, color) {
+function drawLabel(tex, name, color, tag) {
   const canvas = tex.image;
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   const hex = '#' + new THREE.Color(color).getHexString();
+  const cx = canvas.width / 2;
+  const nameY = tag ? 26 : 40;
+
+  // Name (glow + white core).
   ctx.font = 'bold 34px Rajdhani, Segoe UI, system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
@@ -105,13 +110,40 @@ function drawLabel(tex, name, color) {
   ctx.shadowColor = hex;
   ctx.shadowBlur = 16;
   ctx.fillStyle = hex;
-  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+  ctx.fillText(text, cx, nameY);
   ctx.shadowBlur = 0;
   ctx.fillStyle = '#ffffff';
   ctx.globalAlpha = 0.85;
-  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+  ctx.fillText(text, cx, nameY);
   ctx.globalAlpha = 1;
+
+  // Optional tag chip (e.g. "BOT"), so real players stand out.
+  if (tag) {
+    const label = String(tag).toUpperCase();
+    ctx.font = 'bold 20px Rajdhani, Segoe UI, system-ui, sans-serif';
+    const w = ctx.measureText(label).width + 18;
+    const h = 24, x = cx - w / 2, y = 44;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    roundRect(ctx, x, y, w, h, 6);
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = hex;
+    roundRect(ctx, x, y, w, h, 6);
+    ctx.stroke();
+    ctx.fillStyle = hex;
+    ctx.fillText(label, cx, y + h / 2 + 1);
+  }
   tex.needsUpdate = true;
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
 }
 
 // A stable-ish neon colour derived from an id string.

@@ -424,23 +424,61 @@ body.touch #hud.active #boostBtn { display: block; }
 /* --------------------------------------------------- Race standings --- */
 .raceinfo {
   position: absolute;
-  top: 92px;
+  top: 84px;
   left: 50%;
   transform: translateX(-50%);
   display: none;
-  align-items: baseline;
-  gap: 6px;
-  padding: 4px 16px;
-  border-radius: 999px;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 18px;
+  border-radius: 14px;
   background: rgba(10, 0, 24, 0.5);
   border: 1px solid rgba(255, 43, 191, 0.45);
   box-shadow: 0 0 16px rgba(255, 43, 191, 0.3);
   letter-spacing: 0.1em;
+  text-align: center;
 }
 .raceinfo.show { display: flex; }
+.raceinfo .rl1 { display: flex; align-items: baseline; gap: 6px; }
 .raceinfo .rank { font-size: 24px; font-weight: 800; color: #fff; text-shadow: 0 0 12px rgba(255, 43, 191, 0.8); }
 .raceinfo .field { font-size: 14px; color: #b9a9d6; }
 .raceinfo .live { color: var(--green); font-weight: 700; }
+.raceinfo .rl2 { font-size: 11px; letter-spacing: 0.14em; color: #9fb6c6; }
+
+/* ---------------------------------------------------- Sign-in (auth) --- */
+.authrow { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.gbtn {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 9px 18px;
+  background: #fff; color: #2a2a3a;
+  border: none; border-radius: 8px;
+  font-family: var(--font); font-size: 15px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  cursor: pointer; pointer-events: auto;
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.25);
+  transition: transform 0.08s ease, box-shadow 0.12s ease;
+}
+.gbtn:hover { transform: translateY(-1px); box-shadow: 0 0 24px rgba(255, 255, 255, 0.45); }
+.gbtn:active { transform: translateY(0) scale(0.98); }
+.gicon {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: conic-gradient(from -45deg, #ea4335, #fbbc05, #34a853, #4285f4, #ea4335);
+  color: #fff; font-weight: 800; font-size: 14px;
+}
+.authuser { color: var(--cyan); font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; }
+.signout {
+  padding: 6px 12px; background: transparent;
+  border: 1px solid rgba(255, 111, 143, 0.6); border-radius: 7px;
+  color: #ff9db2; font-family: var(--font); font-size: 12px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; pointer-events: auto;
+}
+#menuName.locked, #menuName:disabled { opacity: 0.7; cursor: default; border-color: rgba(0, 234, 255, 0.28); }
+
+/* Race won: gold title flourish. */
+.over.finish #overlayTitle { color: #ffe9a8; text-shadow: 0 0 30px rgba(255, 211, 110, 0.7), 0 0 10px rgba(255, 211, 110, 0.9); }
+.over.finish #overlayTitle .accent { color: #ffd36e; text-shadow: 0 0 30px rgba(255, 211, 110, 0.9); }
 
 /* Keep the tall overlay usable on short screens. */
 .panel { max-height: 96vh; overflow-y: auto; }

@@ -19,7 +19,7 @@ export class Bots {
     const names = shuffle(BOT_NAMES.slice());
     for (let i = 0; i < count; i++) {
       const name = names[i] || ('BOT-' + (i + 1));
-      const ghost = new Ghost(this.scene, BOT_COLORS[i % BOT_COLORS.length], name);
+      const ghost = new Ghost(this.scene, BOT_COLORS[i % BOT_COLORS.length], name, 'BOT');
       this.list.push({
         ghost, name,
         z: startZ + (Math.random() * 80 - 30),

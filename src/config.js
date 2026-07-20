@@ -37,6 +37,9 @@ export const CFG = {
   gateRadius: 8.5,   // threadable radius
   gateFirst: 260,    // distance to the first gate
 
+  // ---- Race mode -------------------------------------------------------
+  raceFinish: 5000,  // metres to the finish line in Race mode
+
   // ---- The Rift (collapse chasing you) ---------------------------------
   riftStartGap: 150, // starting head start, in metres
   riftBase: 0.86,    // rift speed as a fraction of ship base speed...

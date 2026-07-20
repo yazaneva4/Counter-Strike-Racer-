@@ -17,7 +17,9 @@ import { HUD } from './hud.js';
 import { Audio } from './audio.js';
 import { Bots } from './bots.js';
 import { Arena } from './realtime.js';
+import { Finish } from './finish.js';
 import { fetchTop, submitScore, getName, setName } from './leaderboard.js';
+import { signInWithGoogle, handleRedirect, storedUser, signOut } from './auth.js';
 
 const BEST_KEY = 'riftbreak_best';
 const CAM_ORDER = ['third', 'first'];
@@ -47,6 +49,7 @@ class Game {
     this.audio = new Audio();
     this.bots = new Bots(this.scene);
     this.arena = new Arena(this.scene);
+    this.finish = new Finish(this.scene);
 
     this.gates.onResult = (hit, idx) => this._onGate(hit, idx);
 
@@ -72,6 +75,9 @@ class Game {
     this.fieldSize = 1;
     this.liveCount = 0;
     this._submitted = false;
+    this.raceTime = 0;
+    this.won = false;
+    this.user = null;   // signed-in Google user, or null (guest)
 
     this._resetRun();
     this.ship.setVisible(true);
@@ -79,14 +85,36 @@ class Game {
     this.hud.setMuted(this.audio.muted);
     this.hud.setCamMode(this.cameraMode);
 
-    // Leaderboard + multiplayer menu wiring.
+    // Leaderboard + multiplayer + sign-in menu wiring.
     this.hud.setName(this.playerName);
     this.hud.bindMenu({
-      onName: (v) => { this.playerName = setName(v); },
+      onName: (v) => { if (!this.user) this.playerName = setName(v); },
       onSolo: () => this._startGame('solo'),
       onRace: () => this._startGame('race'),
+      onGoogle: () => signInWithGoogle(),
+      onSignOut: () => this._signOut(),
     });
+
+    // Resolve a signed-in Google user: a stored session, then any OAuth redirect.
+    const stored = storedUser();
+    if (stored) this._applyUser(stored);
+    handleRedirect().then((u) => { if (u) this._applyUser(u); this._refreshLeaderboard(); });
+
     this._refreshLeaderboard();
+  }
+
+  _applyUser(user) {
+    if (!user) return;
+    this.user = user;
+    this.playerName = setName(user.name);
+    this.hud.setName(this.playerName);
+    this.hud.setUser(user);
+  }
+
+  _signOut() {
+    signOut();
+    this.user = null;
+    this.hud.setUser(null);
 
     // Tappable mute (handy on touch, where there's no M key).
     if (this.hud.muteIndicator) {
@@ -125,6 +153,8 @@ class Game {
     this.gatesHit = 0;
     this.grazeTimer = 0;
     this.danger = 0;
+    this.raceTime = 0;
+    this.won = false;
   }
 
   _startGame(mode) {
@@ -140,13 +170,16 @@ class Game {
     if (typed) this.playerName = setName(typed);
     if (!this.playerName) this.playerName = setName('PLAYER');
 
-    // Set up (or tear down) the rivals for this mode.
+    // Set up (or tear down) the rivals + finish line for this mode.
     if (this.mode === 'race') {
       this.bots.spawn(RACE_BOTS, this.ship.z);
       this.arena.connect(this.playerName);
+      this.finish.place(CFG.raceFinish);
+      this.finish.setVisible(true);
     } else {
       this.bots.clear();
       this.arena.disconnect();
+      this.finish.setVisible(false);
       this.hud.hideRace();
     }
 
@@ -270,6 +303,7 @@ class Game {
 
     // Shared visual updates.
     this.canyon.update(this.ship.z);
+    this.finish.update(this.time);
     this.gates.update(this.ship.z, this.ship.u, this.ship.v, dt, this.time);
     this.particles.update(dt, this.ship.z, this.speed);
     this.env.update(this.camera, this.time);
@@ -360,13 +394,48 @@ class Game {
 
     // Race rivals: AI bots + live players, and your place in the pack.
     if (this.mode === 'race') {
+      this.raceTime += dt;
       this.bots.update(dt, this.time, this.ship.z, baseSpeed);
       this.arena.broadcast(this.ship.z, this.ship.u, this.ship.v, this.speed);
       this.arena.update(this.ship.z);
       this._computeRank();
+      if (this.ship.z >= CFG.raceFinish) { this._finish(); return; }
     }
 
     this._pushHud();
+  }
+
+  // Crossed the finish line -- a win. Freezes the run and shows the result.
+  _finish() {
+    if (this.state !== 'playing') return;
+    this.won = true;
+    this.state = 'dead';
+    this.deadTimer = 0;
+    this.impulse = 1.2;
+    this.input.consumeAction();
+    this.ship.setVisible(this.cameraMode !== 'first');
+    this.audio.gate(true);
+    this.hud.hideRace();
+
+    const newBest = this.distance > this.best;
+    if (newBest) {
+      this.best = Math.floor(this.distance);
+      try { localStorage.setItem(BEST_KEY, String(this.best)); } catch (e) {}
+    }
+    this.hud.showGameOver({
+      finished: true,
+      position: this.rank,
+      field: this.fieldSize,
+      time: this.raceTime,
+      distance: this.distance,
+      style: this.style,
+      topSpeed: this.topSpeed,
+      gates: this.gatesHit,
+      best: this.best,
+      newBest,
+      mode: 'race',
+    });
+    this._submitScore();
   }
 
   // Your position among all rivals (bots + live players), by distance.
@@ -379,18 +448,28 @@ class Game {
     this.rank = ahead + 1;
     this.fieldSize = field;
     this.liveCount = this.arena.count();
-    this.hud.setRace(this.rank, this.fieldSize, this.liveCount);
+    this.hud.setRace(this.rank, this.fieldSize, this.liveCount, Math.max(0, CFG.raceFinish - pz), this.raceTime);
   }
 
   _updateDead(dt) {
     this.deadTimer += dt;
-    // Let the wreck coast and the rift keep advancing for drama.
-    this.speed *= Math.max(0, 1 - dt * 1.5);
-    this.rift.mesh.visible = true;
-    const progress = THREE.MathUtils.clamp(this.distance / CFG.riftRampDist, 0, 1);
-    this.rift.update(dt, this.ship.z + 2, 40, progress, this.time);
-    this.danger = Math.min(1, this.danger + dt * 0.6);
     this.boostVis += (0 - this.boostVis) * Math.min(1, dt * 3);
+
+    if (this.won) {
+      // Victory lap: coast on through the finish, no rift threat.
+      this.speed *= Math.max(0, 1 - dt * 0.8);
+      this.ship.z += this.speed * dt;
+      this.ship.syncTransform(dt, 0.3);
+      this.danger *= Math.max(0, 1 - dt * 2);
+      this.rift.mesh.visible = false;
+    } else {
+      // Let the wreck coast and the rift keep advancing for drama.
+      this.speed *= Math.max(0, 1 - dt * 1.5);
+      this.rift.mesh.visible = true;
+      const progress = THREE.MathUtils.clamp(this.distance / CFG.riftRampDist, 0, 1);
+      this.rift.update(dt, this.ship.z + 2, 40, progress, this.time);
+      this.danger = Math.min(1, this.danger + dt * 0.6);
+    }
 
     // Keep the pack racing on in the background for drama.
     if (this.mode === 'race') {

@@ -84,10 +84,14 @@ Then open **http://localhost:8080** and press **Space** (or tap) to launch.
 
 ### Online play
 
-- **Modes** — pick **SOLO RUN** (endless time-trial) or **RACE** (AI bots + live players) from the menu after entering a pilot name.
-- **Global leaderboard** — every run is submitted by distance and shown on the menu and game-over screens. Backed by a Supabase table (`csr_scores`) with row-level security and value constraints; the client uses the project's **publishable** key (safe to ship) and reads/writes over REST.
-- **Live multiplayer** — Race mode joins a shared Supabase Realtime channel and broadcasts your ship state ~10×/sec, so anyone else racing at the same time appears as a named ghost. There's no matchmaking — it's one open arena — and it degrades gracefully to "bots only" if the socket can't connect.
-- **Sign-in** — guest names for now; Google sign-in is planned (it needs Google OAuth credentials configured in Supabase).
+- **Modes** — pick **SOLO RUN** (endless time-trial) or **RACE** from the menu after entering a pilot name.
+- **Race to the finish** — Race mode is a sprint to a **finish line** (`CFG.raceFinish`, 5 km) against **AI bots** (labelled `BOT`) and any **live players** online at the same time. Cross the line to win; your finishing **position and time** are shown. Still outrun the rift and don't crash.
+- **Global leaderboard** — every run is submitted by distance and shown on the menu and result screens. Backed by a Supabase table (`csr_scores`) with row-level security and value constraints; the client uses the project's **publishable** key (safe to ship) and reads/writes over REST.
+- **Live multiplayer** — Race mode joins a shared Supabase Realtime channel and broadcasts your ship state ~10×/sec, so anyone else racing at the same time appears as a named ghost (bots are tagged `BOT` so you can tell them apart). One open arena, no matchmaking; degrades gracefully to "bots only" if the socket can't connect.
+- **Sign-in** — optional **Google** sign-in (guest names otherwise). It uses Supabase Auth's OAuth redirect flow (see `src/auth.js`). To enable it, one-time setup is required:
+  1. Google Cloud Console → create an **OAuth 2.0 Client ID** (Web app); authorised redirect URI `https://ttjzmmqalbfeybysmqko.supabase.co/auth/v1/callback`.
+  2. Supabase → **Authentication → Providers → Google** → paste the Client ID + Secret and enable.
+  3. Supabase → **Authentication → URL Configuration** → add the site URL to the redirect allow-list.
 
 > The Supabase URL + publishable key live in `src/leaderboard.js`. These are **public client credentials** by design; the data is protected by row-level security on the server.
 

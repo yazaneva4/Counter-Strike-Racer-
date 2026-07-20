@@ -29,6 +29,9 @@ export class HUD {
     this.submitStatus = this.$('submitStatus');
     this.leaderboard = this.$('leaderboard');
     this.raceInfo = this.$('raceInfo');
+    this.btnGoogle = this.$('btnGoogle');
+    this.authUser = this.$('authUser');
+    this.btnSignOut = this.$('btnSignOut');
   }
 
   setCamMode(mode) {
@@ -40,7 +43,7 @@ export class HUD {
   setName(name) { if (this.menuName) this.menuName.value = name || ''; }
   getNameValue() { return this.menuName ? this.menuName.value.trim() : ''; }
 
-  bindMenu({ onName, onSolo, onRace }) {
+  bindMenu({ onName, onSolo, onRace, onGoogle, onSignOut }) {
     if (this.menuName) {
       const push = () => onName && onName(this.menuName.value);
       this.menuName.addEventListener('input', push);
@@ -50,13 +53,31 @@ export class HUD {
     const go = (fn) => (e) => { e.stopPropagation(); if (this.menuName) this.menuName.blur(); fn && fn(); };
     if (this.btnSolo) this.btnSolo.addEventListener('click', go(onSolo));
     if (this.btnRace) this.btnRace.addEventListener('click', go(onRace));
+    if (this.btnGoogle) this.btnGoogle.addEventListener('click', go(onGoogle));
+    if (this.btnSignOut) this.btnSignOut.addEventListener('click', go(onSignOut));
+  }
+
+  // Reflect the signed-in Google user (or guest when null).
+  setUser(user) {
+    const on = !!user;
+    if (this.btnGoogle) this.btnGoogle.style.display = on ? 'none' : '';
+    if (this.btnSignOut) this.btnSignOut.style.display = on ? '' : 'none';
+    if (this.authUser) this.authUser.textContent = on ? `SIGNED IN · ${user.name}` : '';
+    if (this.menuName) {
+      this.menuName.disabled = on;
+      this.menuName.classList.toggle('locked', on);
+    }
   }
 
   // ---- Live race standings ---------------------------------------------
-  setRace(rank, field, live) {
+  setRace(rank, field, live, toFinish, time) {
     if (!this.raceInfo) return;
     const liveTxt = live > 0 ? ` &middot; <span class="live">${live} LIVE</span>` : '';
-    this.raceInfo.innerHTML = `<span class="rank">P${rank}</span><span class="field">/ ${field}</span>${liveTxt}`;
+    const l2 = (toFinish != null)
+      ? `<div class="rl2">${Math.ceil(toFinish).toLocaleString()} m TO FINISH &middot; ${fmtTime(time)}</div>`
+      : '';
+    this.raceInfo.innerHTML =
+      `<div class="rl1"><span class="rank">P${rank}</span><span class="field">/ ${field}</span>${liveTxt}</div>${l2}`;
     this.raceInfo.classList.add('show');
   }
   hideRace() { if (this.raceInfo) this.raceInfo.classList.remove('show'); }
@@ -135,17 +156,25 @@ export class HUD {
   }
 
   showGameOver(r) {
-    this.overlay.className = 'show over';
-    this.overlayTitle.innerHTML = r.caught ? 'CONSUMED BY THE RIFT' : 'RUN OVER';
-    if (r.mode === 'race') {
-      this.overlaySub.textContent = `Finished P${r.rank} of ${r.field}`;
+    this.overlay.className = 'show over' + (r.finished ? ' finish' : '');
+    // First stat cell varies: a finished race shows TIME, otherwise STYLE.
+    let firstCell = `<div><span>STYLE</span><b>${Math.floor(r.style).toLocaleString()}</b></div>`;
+    if (r.finished) {
+      this.overlayTitle.innerHTML = r.position === 1
+        ? 'RACE <span class="accent">WON</span>' : 'RACE FINISHED';
+      this.overlaySub.textContent = `P${r.position} of ${r.field} · ${fmtTime(r.time)}`;
+      firstCell = `<div><span>TIME</span><b>${fmtTime(r.time)}</b></div>`;
+    } else if (r.mode === 'race') {
+      this.overlayTitle.innerHTML = r.caught ? 'CONSUMED BY THE RIFT' : 'CRASHED OUT';
+      this.overlaySub.textContent = `You were P${r.rank} of ${r.field}`;
     } else {
+      this.overlayTitle.innerHTML = r.caught ? 'CONSUMED BY THE RIFT' : 'RUN OVER';
       this.overlaySub.textContent = r.caught ? 'the collapse caught you' : 'one crash is all it takes';
     }
     this.overlayStats.innerHTML =
       `<div class="statgrid">
          <div><span>DISTANCE</span><b>${Math.floor(r.distance).toLocaleString()} m</b></div>
-         <div><span>STYLE</span><b>${Math.floor(r.style).toLocaleString()}</b></div>
+         ${firstCell}
          <div><span>TOP SPEED</span><b>${Math.round(r.topSpeed)}</b></div>
          <div><span>GATES</span><b>${r.gates}</b></div>
        </div>
@@ -169,4 +198,11 @@ export class HUD {
 function escapeHtml(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function fmtTime(sec) {
+  sec = Math.max(0, Math.floor(sec || 0));
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
 }
