@@ -102,15 +102,15 @@ export class Ship {
   }
 
   _buildCanopy() {
-    // A large elongated bubble canopy that glows violet from within, framed by
-    // magenta neon ribs -- the dominant feature of the airframe (as in the art).
-    const geo = new THREE.SphereGeometry(1.15, 12, 8);
-    geo.scale(0.92, 0.98, 2.05);
-    geo.translate(0, 0.5, -0.7);
+    // A violet bubble canopy up FRONT (a cockpit reads as the nose). Kept modest
+    // so the glowing engine nozzles at the tail clearly mark the back.
+    const geo = new THREE.SphereGeometry(1.1, 12, 8);
+    geo.scale(0.8, 0.84, 1.7);
+    geo.translate(0, 0.42, -1.0);
     this.canopyMat = new THREE.MeshStandardMaterial({
       color: 0x230d44,
       emissive: COL_CANOPY,
-      emissiveIntensity: 1.2,
+      emissiveIntensity: 0.85,
       metalness: 0.45,
       roughness: 0.12,
       transparent: true,
@@ -118,16 +118,20 @@ export class Ship {
     });
     const canopy = new THREE.Mesh(geo, this.canopyMat);
     this.body.add(canopy);
-    this.body.add(neon(geo, COL_MAGENTA, 0.55)); // magenta canopy framing
+    this.body.add(neon(geo, COL_MAGENTA, 0.5)); // magenta canopy framing
   }
 
   _buildWings() {
-    // Long, thin, nearly-straight wings that taper to a single sharp tip.
-    // Shape space: X = span outboard, Y = chord (becomes +Z = aft).
+    // Swept-back wings tapering to a single tip. The rearward sweep (tips point
+    // aft, toward the chase camera) makes the craft read as an arrow flying
+    // FORWARD -- so it never looks like it's going backwards.
+    // Shape space: X = span outboard, Y = chord (+Y becomes +Z = aft).
     const pts = [
-      [0.4, -1.2], [3.5, -0.8], [6.5, -0.55], [9.0, -0.4],
-      [11.7, 0.0],   // single straight tip (no fork)
-      [9.0, 0.4], [6.5, 0.6], [3.5, 0.9], [0.4, 1.2],
+      [0.4, -1.0],   // root leading edge (forward)
+      [4.5, -0.1], [8.0, 0.9],
+      [11.2, 2.0],   // tip: far outboard and swept well aft
+      [10.4, 2.6],   // tip trailing
+      [7.0, 2.2], [3.5, 1.8], [0.4, 1.5],   // root trailing edge
     ];
     const shape = new THREE.Shape();
     shape.moveTo(pts[0][0], pts[0][1]);
@@ -155,22 +159,22 @@ export class Ship {
       this.body.add(wing);
       wing.add(neon(wingGeo, COL_MAGENTA, 0.5)); // subtle full outline
 
-      // Magenta neon strip along the TOP leading edge, running out to the tip.
+      // Magenta neon strip along the swept leading edge, out to the tip.
       const top = new THREE.Mesh(
-        new THREE.BoxGeometry(11.3, 0.09, 0.5),
+        new THREE.BoxGeometry(11.6, 0.09, 0.4),
         new THREE.MeshBasicMaterial({ color: COL_MAGENTA, transparent: true, opacity: 0.95,
           blending: THREE.AdditiveBlending, depthWrite: false }));
-      top.position.set(dir * 5.75, 0.15, -0.4);
-      top.rotation.y = dir * -0.05;
+      top.position.set(dir * 5.6, 0.14, 0.35);
+      top.rotation.y = dir * -0.27;   // follow the rearward sweep
       wing.add(top);
 
-      // Cyan neon strip along the underside/trailing edge, out to the tip.
+      // Cyan neon strip along the underside, parallel to the leading edge.
       const bot = new THREE.Mesh(
-        new THREE.BoxGeometry(11.0, 0.09, 0.5),
+        new THREE.BoxGeometry(11.0, 0.09, 0.4),
         new THREE.MeshBasicMaterial({ color: COL_CYAN, transparent: true, opacity: 0.9,
           blending: THREE.AdditiveBlending, depthWrite: false }));
-      bot.position.set(dir * 5.6, -0.15, 0.5);
-      bot.rotation.y = dir * -0.05;
+      bot.position.set(dir * 5.4, -0.14, 1.05);
+      bot.rotation.y = dir * -0.27;
       wing.add(bot);
     }
   }
@@ -178,8 +182,8 @@ export class Ship {
   _buildEngines() {
     const nacelleMat = this._hullMaterial(true);
 
+    // Two nacelle pods flanking the tail, each ending in a glowing nozzle.
     for (const dir of [1, -1]) {
-      // Intake pod, flanking the cockpit, splayed slightly outward at the base.
       const housingGeo = new THREE.CylinderGeometry(0.8, 0.98, 3.2, 8);
       housingGeo.rotateX(Math.PI / 2);
       const housing = new THREE.Mesh(housingGeo, nacelleMat);
@@ -188,80 +192,56 @@ export class Ship {
       this.body.add(housing);
       housing.add(neon(housingGeo, COL_CYAN, 0.7));
 
-      // Horizontal intake louvers glowing violet on the pod (as in the art).
-      for (let k = 0; k < 3; k++) {
-        const louver = new THREE.Mesh(
-          new THREE.BoxGeometry(1.0, 0.07, 0.5),
-          new THREE.MeshBasicMaterial({ color: COL_CANOPY, transparent: true, opacity: 0.8,
-            blending: THREE.AdditiveBlending, depthWrite: false }));
-        louver.position.set(dir * 1.32, -0.7 + k * 0.5, 3.55);
-        louver.rotation.z = dir * -0.09;
-        this.body.add(louver);
-      }
-
-      // Glowing exhaust disc facing the camera (+Z), with a white-hot core.
-      const discGeo = new THREE.CircleGeometry(0.82, 20);
-      const discMat = new THREE.MeshBasicMaterial({
-        color: COL_ENGINE, transparent: true, opacity: 0.95,
-        blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
-      });
-      const disc = new THREE.Mesh(discGeo, discMat);
-      disc.position.set(dir * 1.25, -0.15, 4.15);
-      this.body.add(disc);
-
-      const core = new THREE.Mesh(new THREE.CircleGeometry(0.42, 16),
-        new THREE.MeshBasicMaterial({ color: 0xffd9ff, transparent: true, opacity: 0.95,
-          blending: THREE.AdditiveBlending, depthWrite: false }));
-      core.position.set(dir * 1.25, -0.15, 4.17);
-      this.body.add(core);
-
-      // Exhaust plume: an additive cone streaming back toward the camera.
-      const plumeGeo = new THREE.ConeGeometry(0.72, 3.6, 14, 1, true);
-      plumeGeo.rotateX(-Math.PI / 2);    // taper along +Z
-      plumeGeo.translate(0, 0, 2.0);
-      const plumeMat = new THREE.MeshBasicMaterial({
-        color: COL_ENGINE, transparent: true, opacity: 0.6,
-        blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide,
-      });
-      const plume = new THREE.Mesh(plumeGeo, plumeMat);
-      plume.position.set(dir * 1.25, -0.15, 4.2);
-      this.body.add(plume);
-
-      const light = new THREE.PointLight(COL_ENGINE, 4, 46, 2);
-      light.position.set(dir * 1.25, -0.15, 4.6);
-      this.body.add(light);
-
-      this.engines.push({ disc, discMat, core, plume, plumeMat, light });
+      this._addEngine(dir * 1.3, -0.15, 4.2, 0.82, false);
     }
 
-    // Central exhaust: the bright magenta jet that dominates the tail in the art.
-    const cDisc = new THREE.Mesh(new THREE.CircleGeometry(0.62, 22),
+    // A larger central engine.
+    this._addEngine(0, -0.32, 4.05, 0.95, true);
+  }
+
+  // A rear engine nozzle facing the chase camera: a bright ring around a dark
+  // throat with a hot core and a soft flame -- reads unmistakably as the BACK of
+  // the craft, so the ship never looks like it's flying backwards.
+  _addEngine(x, y, z, r, big) {
+    // Dark throat (the hole you look into).
+    const throat = new THREE.Mesh(
+      new THREE.CircleGeometry(r * 0.72, 22),
+      new THREE.MeshBasicMaterial({ color: 0x0a0014, transparent: true, opacity: 0.92,
+        depthWrite: false, side: THREE.DoubleSide }));
+    throat.position.set(x, y, z - 0.06);
+    this.body.add(throat);
+
+    // Bright nozzle ring.
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(r * 0.72, r, 26),
       new THREE.MeshBasicMaterial({ color: COL_ENGINE, transparent: true, opacity: 0.95,
         blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
-    cDisc.position.set(0, -0.32, 4.0);
-    this.body.add(cDisc);
+    ring.position.set(x, y, z);
+    this.body.add(ring);
 
-    const cCore = new THREE.Mesh(new THREE.CircleGeometry(0.3, 18),
-      new THREE.MeshBasicMaterial({ color: 0xffe6ff, transparent: true, opacity: 0.98,
+    // Hot core.
+    const core = new THREE.Mesh(
+      new THREE.CircleGeometry(r * 0.42, 18),
+      new THREE.MeshBasicMaterial({ color: 0xfff0ff, transparent: true, opacity: 0.95,
         blending: THREE.AdditiveBlending, depthWrite: false }));
-    cCore.position.set(0, -0.32, 4.03);
-    this.body.add(cCore);
+    core.position.set(x, y, z + 0.03);
+    this.body.add(core);
 
-    const cPlumeGeo = new THREE.ConeGeometry(0.5, 4.4, 16, 1, true);
-    cPlumeGeo.rotateX(-Math.PI / 2);
-    cPlumeGeo.translate(0, 0, 2.3);
-    const cPlumeMat = new THREE.MeshBasicMaterial({ color: COL_ENGINE, transparent: true,
-      opacity: 0.6, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
-    const cPlume = new THREE.Mesh(cPlumeGeo, cPlumeMat);
-    cPlume.position.set(0, -0.32, 4.0);
-    this.body.add(cPlume);
+    // Soft flame tapering back toward the camera (grows with thrust).
+    const flameGeo = new THREE.ConeGeometry(r * 0.85, r * 3.0, 18, 1, true);
+    flameGeo.rotateX(Math.PI / 2);            // apex downstream (+Z, toward camera)
+    flameGeo.translate(0, 0, r * 1.5);
+    const flameMat = new THREE.MeshBasicMaterial({ color: COL_ENGINE, transparent: true,
+      opacity: 0.38, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+    const flame = new THREE.Mesh(flameGeo, flameMat);
+    flame.position.set(x, y, z + 0.05);
+    this.body.add(flame);
 
-    const cLight = new THREE.PointLight(COL_ENGINE, 5, 55, 2);
-    cLight.position.set(0, -0.28, 4.7);
-    this.body.add(cLight);
+    const light = new THREE.PointLight(COL_ENGINE, big ? 5 : 4, big ? 55 : 46, 2);
+    light.position.set(x, y, z + 0.5);
+    this.body.add(light);
 
-    this.engines.push({ disc: cDisc, discMat: cDisc.material, core: cCore,
-      plume: cPlume, plumeMat: cPlumeMat, light: cLight });
+    this.engines.push({ ringMat: ring.material, core, flame, flameMat, light });
   }
 
   _buildFins() {
@@ -369,14 +349,13 @@ export class Ship {
     const t = this.thrust;
     for (const e of this.engines) {
       const flick = 0.85 + Math.random() * 0.15;
-      e.discMat.opacity = 0.6 + t * 0.4 * flick;
-      e.disc.scale.setScalar(0.85 + t * 0.5 * flick);
+      e.ringMat.opacity = 0.8 + t * 0.2 * flick;
       e.core.scale.setScalar(0.7 + t * 0.7 * flick);
-      e.plumeMat.opacity = 0.3 + t * 0.5 * flick;
-      e.plume.scale.set(1, 1, 0.7 + t * 1.1 * flick);
+      e.flameMat.opacity = (0.22 + t * 0.5) * flick;
+      e.flame.scale.set(1, 1, 0.55 + t * 1.5 * flick);
       e.light.intensity = 2.5 + t * 7 * flick;
     }
-    if (this.canopyMat) this.canopyMat.emissiveIntensity = 0.95 + t * 0.5;
+    if (this.canopyMat) this.canopyMat.emissiveIntensity = 0.7 + t * 0.4;
   }
 
   worldPos(out = this._pos) { return worldFromLocal(this.z, this.u, this.v, out); }
