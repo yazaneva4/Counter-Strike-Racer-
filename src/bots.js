@@ -26,21 +26,17 @@ export class Bots {
         u: (Math.random() * 2 - 1) * 6,
         v: CFG.wallHeight * (0.35 + Math.random() * 0.2),
         speed: CFG.startSpeed,
-        skill: 0.92 + Math.random() * 0.32,   // pace relative to the player
         lanePhase: Math.random() * 6.2831,
         laneFreq: 0.12 + Math.random() * 0.22,
       });
     }
   }
 
-  update(dt, t, playerZ, playerBaseSpeed) {
+  update(dt, t, playerZ, playerSpeed) {
     for (const b of this.list) {
-      // Target pace tracks the player's, scaled by skill, with rubber-banding:
-      // a bot far ahead eases off; one far behind speeds up.
-      const gap = b.z - playerZ;
-      const rubber = THREE.MathUtils.clamp(-gap * 0.02, -14, 16);
-      const target = Math.max(CFG.startSpeed * 0.6, playerBaseSpeed * b.skill + rubber);
-      b.speed += (target - b.speed) * Math.min(1, dt * 1.6);
+      // Bots always match the player's exact current speed -- no faster, no
+      // slower -- so Bot Race is decided purely by piloting, not AI pace.
+      b.speed += (playerSpeed - b.speed) * Math.min(1, dt * 8);
       b.z += b.speed * dt;
 
       // Wander laterally / vertically inside the corridor.
