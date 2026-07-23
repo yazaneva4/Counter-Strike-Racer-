@@ -25,7 +25,7 @@ const CAM_ORDER = ['third', 'first'];
 const CAM_LABEL = { third: '3RD PERSON', first: '1ST PERSON' };
 const RACE_BOTS = 5;                 // AI rivals in Bot Race
 const LIVE_RACE_TARGET = 4;          // total racers (real + fill-in bots) for Live Race
-const LOBBY_WAIT_MS = 5 * 60 * 1000; // how long the lobby waits before bots fill empty seats
+const LOBBY_WAIT_MS = 60 * 1000; // how long the lobby waits before bots fill empty seats
 
 // A short, unambiguous room code (no 0/O/1/I) for hosting a Live Race lobby.
 function genRoomCode() {
