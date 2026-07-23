@@ -497,7 +497,7 @@ class Game {
     // Race rivals: AI bots + live players, and your place in the pack.
     if (this._isRace()) {
       this.raceTime += dt;
-      this.bots.update(dt, this.time, this.ship.z);
+      this.bots.update(dt, this.time, this.ship.z, this.speed);
       this.arena.broadcast(this.ship.z, this.ship.u, this.ship.v, this.speed);
       this.arena.update(this.ship.z);
       this._computeRank();
@@ -575,7 +575,7 @@ class Game {
 
     // Keep the pack racing on in the background for drama.
     if (this._isRace()) {
-      this.bots.update(dt, this.time, this.ship.z);
+      this.bots.update(dt, this.time, this.ship.z, this.speed);
       this.arena.update(this.ship.z);
     }
 

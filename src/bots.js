@@ -1,9 +1,9 @@
 // AI opponents. Real bots, not scripted puppets: each one integrates the same
 // lateral/vertical flight physics as the player (accel, damping, clamped
-// velocity), makes its own boost decisions against a real boost meter, paces
-// itself off the same speed-ramp formula the player uses (evaluated against
-// its OWN distance), and can actually crash into a wall or the floor. A crashed
-// bot simply stops -- it stays in the field as a wreck rather than vanishing.
+// velocity) and can actually crash into a wall or the floor. Their forward
+// pace is locked to the player's exact current speed -- no faster, no slower,
+// no lag -- so pace is never a competitive factor; only piloting is. A
+// crashed bot simply stops -- it stays in the field as a wreck.
 
 import * as THREE from 'three';
 import { CFG } from './config.js';
@@ -29,9 +29,6 @@ export class Bots {
         v: CFG.wallHeight * 0.42,
         velU: 0, velV: 0,
         speed: CFG.startSpeed,
-        boost: CFG.boostMax,
-        boosting: false,
-        boostTimer: 0,
         wanderPhase: Math.random() * 6.2831,
         wanderFreq: 0.1 + Math.random() * 0.18,
         vertPhase: Math.random() * 6.2831,
@@ -39,10 +36,9 @@ export class Bots {
     }
   }
 
-  // playerZ is used only for a mild catch-up bias on boost decisions.
-  update(dt, t, playerZ) {
+  update(dt, t, playerZ, playerSpeed) {
     for (const b of this.list) {
-      if (b.alive) this._flyOne(b, dt, t, playerZ);
+      if (b.alive) this._flyOne(b, dt, t, playerSpeed);
 
       // Only render bots in a visible band around the player.
       const near = b.z > playerZ - 140 && b.z < playerZ + 500;
@@ -51,36 +47,10 @@ export class Bots {
     }
   }
 
-  _flyOne(b, dt, t, playerZ) {
-    // ---- Boost decision: a real meter, drained/regenerated like the player's,
-    // with an independent random cadence so bots don't all boost in lockstep.
-    // A bot that has fallen behind is more likely to pull the trigger.
-    const behind = Math.max(0, playerZ - b.z);
-    const catchUpBias = THREE.MathUtils.clamp(behind / 400, 0, 1);
-    b.boostTimer -= dt;
-    if (!b.boosting && b.boost > 25 && b.boostTimer <= 0) {
-      if (Math.random() < dt * (0.12 + catchUpBias * 0.35)) {
-        b.boosting = true;
-        b.boostTimer = 1.2 + Math.random() * 1.8;
-      }
-    } else if (b.boosting && (b.boost <= 0 || b.boostTimer <= 0)) {
-      b.boosting = false;
-      b.boostTimer = 0.4 + Math.random() * 0.8;
-    }
-    if (b.boosting) b.boost = Math.max(0, b.boost - CFG.boostDrain * dt);
-    else b.boost = Math.min(CFG.boostMax, b.boost + CFG.boostRegen * dt);
-
-    // ---- Forward pace: the SAME speed-ramp formula the player uses, evaluated
-    // against the bot's own distance -- identical power, independent progress.
-    const baseSpeed = Math.min(
-      CFG.maxSpeed - CFG.boostSpeed,
-      CFG.startSpeed + Math.sqrt(Math.max(0, b.z)) * CFG.speedRamp
-    );
-    const targetSpeed = THREE.MathUtils.clamp(
-      baseSpeed + (b.boosting ? CFG.boostSpeed : 0),
-      0, CFG.maxSpeed
-    );
-    b.speed += (targetSpeed - b.speed) * Math.min(1, dt * 3);
+  _flyOne(b, dt, t, playerSpeed) {
+    // Forward pace: locked to the player's exact current speed, instantly --
+    // no ramp-up lag, no independent boost economy to fall behind on.
+    b.speed = playerSpeed;
     b.z += b.speed * dt;
 
     // ---- Steering AI: hug a wandering line down the corridor, staying clear
