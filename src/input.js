@@ -2,12 +2,21 @@
 // flight code never has to care where the intent came from.
 //
 // Touch scheme (phones/tablets): drag a finger anywhere to steer like a floating
-// joystick -- horizontal drag = left/right, vertical drag = climb/dive -- and
-// hold the on-screen BOOST pad with a second thumb to accelerate.
+// joystick -- horizontal drag = left/right, vertical drag = climb/dive --
+// double-tap anywhere to cycle the camera, hold a finger still to spool up
+// boost, or use the dedicated on-screen BOOST pad with a second thumb.
 
 import * as THREE from 'three';
 
-const STEER_RADIUS = 84; // px of drag for full deflection
+const STEER_RADIUS = 84;      // px of drag for full deflection
+
+const TAP_MAX_MS = 250;       // release within this long to count as a "tap"
+const TAP_MAX_MOVE_PX = 18;   // and moved less than this -- otherwise it's a drag
+const DOUBLE_TAP_MS = 350;    // max gap between two taps to read as a double-tap
+const DOUBLE_TAP_DIST_PX = 60;// and they must land roughly in the same spot
+
+const LONG_PRESS_MS = 380;    // hold a finger still this long to spool up boost
+const LONG_PRESS_MOVE_PX = 16;// moving past this before then cancels it (it's a drag)
 
 export class Input {
   constructor() {
@@ -18,12 +27,17 @@ export class Input {
     this.pointerBoost = false;
 
     this.touchMode = false;
-    this.touchBoost = false;
+    this.touchBoost = false;      // dedicated BOOST pad held
+    this.longPressBoost = false;  // steering finger held still long enough to boost
     this.steerId = null;    // identifier of the finger currently steering
     this.tax = 0;           // touch lateral axis
     this.tay = 0;           // touch vertical axis
     this._sx = 0;
     this._sy = 0;
+    this._steerStartT = 0;
+    this._longPressFired = false;
+    this._longPressTimer = null;
+    this._lastTap = null;   // { t, x, y } of the last qualifying quick tap
 
     this._action = false;   // consumable "confirm / launch / restart"
     this._muteToggled = false;
@@ -65,14 +79,16 @@ export class Input {
     // ---- On-screen boost pad ------------------------------------------
     const boostBtn = document.getElementById('boostBtn');
     if (boostBtn) {
+      // The pad's glow is shared with the long-press-to-boost gesture below, so
+      // only clear it once neither source is holding boost any more.
       const on = (e) => { e.preventDefault(); this.touchBoost = true; boostBtn.classList.add('down'); };
-      const off = (e) => { e.preventDefault(); this.touchBoost = false; boostBtn.classList.remove('down'); };
+      const off = (e) => { e.preventDefault(); this.touchBoost = false; if (!this.longPressBoost) boostBtn.classList.remove('down'); };
       boostBtn.addEventListener('touchstart', on, { passive: false });
       boostBtn.addEventListener('touchend', off, { passive: false });
       boostBtn.addEventListener('touchcancel', off, { passive: false });
       // Also works with a mouse for testing.
       boostBtn.addEventListener('mousedown', on);
-      addEventListener('mouseup', () => { this.touchBoost = false; boostBtn.classList.remove('down'); });
+      addEventListener('mouseup', () => { this.touchBoost = false; if (!this.longPressBoost) boostBtn.classList.remove('down'); });
       this._boostBtn = boostBtn;
     }
 
@@ -88,6 +104,21 @@ export class Input {
           this._sy = t.clientY;
           this.tax = 0;
           this.tay = 0;
+          this._steerStartT = performance.now();
+          this._longPressFired = false;
+          clearTimeout(this._longPressTimer);
+
+          // Hold this finger roughly still (not steering) and boost kicks in
+          // on its own, so flying one-thumb doesn't require the BOOST pad.
+          if (!uiTarget(t.target)) {
+            const id = t.identifier;
+            this._longPressTimer = setTimeout(() => {
+              if (this.steerId !== id) return;
+              this._longPressFired = true;
+              this.longPressBoost = true;
+              if (this._boostBtn) this._boostBtn.classList.add('down');
+            }, LONG_PRESS_MS);
+          }
         }
       }
     }, { passive: true });
@@ -97,6 +128,11 @@ export class Input {
         if (t.identifier === this.steerId) {
           this.tax = THREE.MathUtils.clamp((t.clientX - this._sx) / STEER_RADIUS, -1, 1);
           this.tay = THREE.MathUtils.clamp(-(t.clientY - this._sy) / STEER_RADIUS, -1, 1);
+          // Real steering, not a held-still press -- don't let it turn into a boost.
+          if (this._longPressTimer && !this._longPressFired) {
+            const moved = Math.hypot(t.clientX - this._sx, t.clientY - this._sy);
+            if (moved > LONG_PRESS_MOVE_PX) { clearTimeout(this._longPressTimer); this._longPressTimer = null; }
+          }
         }
       }
     }, { passive: true });
@@ -104,6 +140,28 @@ export class Input {
     const endTouch = (e) => {
       for (const t of e.changedTouches) {
         if (t.identifier === this.steerId) {
+          const dur = performance.now() - this._steerStartT;
+          const moved = Math.hypot(t.clientX - this._sx, t.clientY - this._sy);
+
+          if (this._longPressTimer) { clearTimeout(this._longPressTimer); this._longPressTimer = null; }
+          if (this.longPressBoost) {
+            this.longPressBoost = false;
+            if (this._boostBtn && !this.touchBoost) this._boostBtn.classList.remove('down');
+          }
+
+          // A quick, near-stationary release is a tap -- two of those close in
+          // time and place read as a double-tap, which cycles the camera view.
+          if (!this._longPressFired && dur < TAP_MAX_MS && moved < TAP_MAX_MOVE_PX && !uiTarget(t.target)) {
+            const now = performance.now();
+            const last = this._lastTap;
+            if (last && now - last.t < DOUBLE_TAP_MS && Math.hypot(t.clientX - last.x, t.clientY - last.y) < DOUBLE_TAP_DIST_PX) {
+              this._camAction = 'cycle';
+              this._lastTap = null;
+            } else {
+              this._lastTap = { t: now, x: t.clientX, y: t.clientY };
+            }
+          }
+
           this.steerId = null;
           this.tax = 0;
           this.tay = 0;
@@ -113,7 +171,15 @@ export class Input {
     addEventListener('touchend', endTouch, { passive: true });
     addEventListener('touchcancel', endTouch, { passive: true });
 
-    addEventListener('blur', () => { this.keys.clear(); this.touchBoost = false; this.steerId = null; this.tax = this.tay = 0; });
+    addEventListener('blur', () => {
+      this.keys.clear();
+      this.touchBoost = false;
+      this.longPressBoost = false;
+      if (this._longPressTimer) { clearTimeout(this._longPressTimer); this._longPressTimer = null; }
+      if (this._boostBtn) this._boostBtn.classList.remove('down');
+      this.steerId = null;
+      this.tax = this.tay = 0;
+    });
   }
 
   _onBoostPad(touch) {
@@ -173,7 +239,7 @@ export class Input {
   }
 
   isBoost() {
-    return this._has(' ', 'Shift') || this.pointerBoost || this.touchBoost;
+    return this._has(' ', 'Shift') || this.pointerBoost || this.touchBoost || this.longPressBoost;
   }
 
   // True exactly once per press of Enter / Space / click / tap.

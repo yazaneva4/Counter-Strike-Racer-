@@ -203,8 +203,8 @@ export class HUD {
        </div>
        <div class="controls ctrl-touch">
          <span><b>Drag</b> anywhere &nbsp;to steer &amp; fly</span>
-         <span>hold the <b>BOOST</b> pad &nbsp;to accelerate</span>
-         <span>tap <b>CAM</b> &nbsp;to switch view</span>
+         <span><b>Hold</b> still &nbsp;or the BOOST pad to accelerate</span>
+         <span><b>Double-tap</b> &nbsp;to switch camera view</span>
        </div>
        <div class="launch">Pick <b>SOLO</b>, <b>BOT RACE</b> or <b>LIVE RACE</b><span class="desktop-only"> — or <b>SPACE</b> for Solo</span></div>`;
     this.hudRoot.classList.remove('active');
@@ -247,8 +247,12 @@ export class HUD {
   }
 
   setMuted(m) {
-    this.muteIndicator.textContent = m ? 'MUTED (M)' : 'SOUND (M)';
     this.muteIndicator.classList.toggle('muted', m);
+    this.muteIndicator.setAttribute('aria-label', m ? 'Unmute sound' : 'Mute sound');
+    const icon = this.muteIndicator.querySelector('.mute-icon');
+    const txt = this.muteIndicator.querySelector('.mute-txt');
+    if (icon) icon.textContent = m ? '\u{1F507}' : '\u{1F50A}';
+    if (txt) txt.textContent = m ? 'MUTED' : 'SOUND';
   }
 }
 

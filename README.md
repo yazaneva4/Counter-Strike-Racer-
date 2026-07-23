@@ -43,7 +43,10 @@ Then open **http://localhost:8080** and press **Space** (or tap) to launch.
 
 - **Drag** a finger anywhere to steer and fly — horizontal drag steers, vertical
   drag climbs/dives, like a floating joystick.
-- Hold the on-screen **BOOST** pad (bottom-right) with a second thumb.
+- **Hold** a finger still for a moment to spool up **boost** — or hold the
+  on-screen **BOOST** pad (bottom-right) with a second thumb.
+- **Double-tap** anywhere to cycle the camera view.
+- **Tap** the **SOUND** button to mute/unmute.
 - **Tap** to launch or restart.
 
 ---
@@ -75,7 +78,7 @@ Then open **http://localhost:8080** and press **Space** (or tap) to launch.
 | Particles | `src/particles.js` | Streaming speed dust, graze sparks, exhaust trail and crash bursts. |
 | Environment | `src/environment.js` | A camera-locked sky dome with a hand-written gradient and a striped burning sun baked into the shader. |
 | Post FX | `src/postfx.js` | A neon glow pass + chromatic aberration, vignette, film grain and the rift-danger red pulse. |
-| Input | `src/input.js` | Keyboard, mouse-steer and touch (floating joystick + boost pad) folded into one set of axes. |
+| Input | `src/input.js` | Keyboard, mouse-steer and touch (floating joystick, hold-to-boost, double-tap camera cycle, boost pad) folded into one set of axes. |
 | Leaderboard | `src/leaderboard.js` | Global guest leaderboard over Supabase REST (plain `fetch`, no SDK). Submits a finished run and pulls the top scores; fails safe offline. |
 | Bots | `src/bots.js` | Real AI opponents — each integrates the same lateral/vertical flight physics as the player (accel, damping, velocity clamps), looks ahead along the corridor to steer toward a safe lane inside a personal lateral preference that drifts over the run, matches the player's speed exactly, and can genuinely crash into a wall or the floor. Not a scripted puppet. |
 | Live arena | `src/realtime.js` | Live multiplayer over Supabase Realtime broadcast (raw WebSocket, Phoenix protocol). A room is just a channel named by its code, so HOST/JOIN with the same code land in the same race. |
