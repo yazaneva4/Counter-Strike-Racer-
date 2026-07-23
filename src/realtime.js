@@ -76,24 +76,63 @@ export class Arena {
       }
       e2.name = p.name; e2.z = +p.z || 0; e2.u = +p.u || 0; e2.v = +p.v || 0;
       e2.speed = +p.speed || 0; e2.lastSeen = performance.now();
+      // Lobby/race phase + this peer's lobby deadline (epoch ms), used to keep
+      // the whole room on ONE shared countdown. Missing ph = older client;
+      // treat as racing so it stays visible.
+      e2.phase = p.ph === 'lobby' ? 'lobby' : 'race';
+      e2.deadline = +p.dl || 0;
       e2.ghost.setName(p.name || 'RIVAL');
+      return;
+    }
+    // Someone in the room launched the race -- everyone still waiting starts NOW.
+    if (msg.event === 'broadcast' && msg.payload && msg.payload.event === 'go') {
+      const p = msg.payload.payload;
+      if (p && p.id === this.id) return;
+      if (this.onGo) this.onGo();
     }
   }
 
   // Broadcast the local ship state (rate-limited internally). Also doubles as
   // the lobby "I'm here" heartbeat -- call it with zeros while waiting.
-  broadcast(z, u, v, speed) {
+  // `phase` is 'lobby' or 'race'; `deadline` (epoch ms) is only meaningful in
+  // the lobby and lets the room converge on the earliest shared countdown.
+  broadcast(z, u, v, speed, phase = 'race', deadline = 0) {
     if (!this.joined) return;
     const now = performance.now();
     if (now - this._lastSend < SEND_INTERVAL) return;
     this._lastSend = now;
     this._send({
       topic: this.topic, event: 'broadcast', ref: String(++this.ref),
-      payload: { type: 'broadcast', event: 'pos', payload: { id: this.id, name: this.name, z, u, v, speed } },
+      payload: { type: 'broadcast', event: 'pos', payload: { id: this.id, name: this.name, z, u, v, speed, ph: phase, dl: deadline } },
     });
   }
 
-  // Position/prune remote ghosts around the player.
+  // Announce "the race starts now" to everyone still in the lobby. Not
+  // throttled -- it's a one-shot control message.
+  sendGo() {
+    this._send({
+      topic: this.topic, event: 'broadcast', ref: String(++this.ref),
+      payload: { type: 'broadcast', event: 'go', payload: { id: this.id } },
+    });
+  }
+
+  // The earliest lobby deadline among peers still waiting (0 if none).
+  minLobbyDeadline() {
+    let min = 0;
+    for (const p of this.players.values()) {
+      if (p.phase === 'lobby' && p.deadline > 0 && (min === 0 || p.deadline < min)) min = p.deadline;
+    }
+    return min;
+  }
+
+  // True if anyone in the room is already racing.
+  raceInProgress() {
+    for (const p of this.players.values()) if (p.phase === 'race') return true;
+    return false;
+  }
+
+  // Position/prune remote ghosts around the player. Peers still in the lobby
+  // aren't racing yet, so their ghosts stay hidden.
   update(playerZ) {
     const now = performance.now();
     for (const [id, p] of this.players) {
@@ -102,16 +141,17 @@ export class Arena {
         this.players.delete(id);
         continue;
       }
-      const near = p.z > playerZ - 140 && p.z < playerZ + 500;
+      const near = p.phase !== 'lobby' && p.z > playerZ - 140 && p.z < playerZ + 500;
       p.ghost.setVisible(near);
       if (near) p.ghost.place(p.z, p.u, p.v);
     }
   }
 
-  // Distances of live rivals, for race-position ranking.
+  // Distances of live rivals, for race-position ranking. Peers still in the
+  // lobby aren't part of the running race yet.
   positions() {
     const out = [];
-    for (const p of this.players.values()) out.push(p.z);
+    for (const p of this.players.values()) if (p.phase !== 'lobby') out.push(p.z);
     return out;
   }
 

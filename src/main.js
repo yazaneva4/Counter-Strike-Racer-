@@ -226,6 +226,12 @@ class Game {
     this.hud.hideRace();
 
     this.lobbyDeadline = Date.now() + LOBBY_WAIT_MS;
+    // When anyone else in the room launches, we launch at the same moment.
+    this.arena.onGo = () => {
+      if (this.state !== 'lobby') return;
+      const total = 1 + this.arena.count();
+      this._launchLiveRace(Math.max(0, LIVE_RACE_TARGET - total));
+    };
     this.arena.connect(this.playerName, this.roomCode);
 
     this.state = 'lobby';
@@ -243,7 +249,9 @@ class Game {
 
   // Race begins for real: `extraBots` real-physics bots fill any empty seats
   // up to LIVE_RACE_TARGET (0 if enough live players already showed up).
-  _launchLiveRace(extraBots) {
+  // `announce` broadcasts "go" so everyone else in the lobby starts too.
+  _launchLiveRace(extraBots, announce = false) {
+    if (announce) this.arena.sendGo();
     this._resetRun();
     this.ship.setVisible(this.cameraMode !== 'first');
 
@@ -409,6 +417,9 @@ class Game {
 
   // Waiting room before a Live Race: attract-style cruise, a lobby heartbeat
   // ping over the room's realtime channel, and the auto-start conditions.
+  // The countdown is ROOM-WIDE: everyone converges on the earliest deadline
+  // (whoever entered first), and whoever launches announces "go" so the rest
+  // start at the same moment instead of each waiting out their own clock.
   _updateLobby(dt) {
     this.speed = CFG.startSpeed * 0.7;
     this.ship.z += this.speed * dt;
@@ -421,18 +432,25 @@ class Game {
     this.boostVis += (0 - this.boostVis) * Math.min(1, dt * 4);
     this.danger = 0;
 
-    // Presence heartbeat (broadcast() throttles this to ~10 Hz internally).
-    this.arena.broadcast(0, 0, 0, 0);
+    // Presence heartbeat carrying our lobby deadline (throttled to ~10 Hz).
+    this.arena.broadcast(0, 0, 0, 0, 'lobby', this.lobbyDeadline);
     this.arena.update(this.ship.z);
+
+    // Adopt the room's earliest deadline so every clock shows the same time.
+    const roomDeadline = this.arena.minLobbyDeadline();
+    if (roomDeadline > 0 && roomDeadline < this.lobbyDeadline) this.lobbyDeadline = roomDeadline;
+
+    // If the race is already running in this room, jump straight in.
+    if (this.arena.raceInProgress()) { this._launchLiveRace(0); return; }
 
     const total = 1 + this.arena.count();
     const msLeft = Math.max(0, this.lobbyDeadline - Date.now());
     this.hud.updateLobby(total, LIVE_RACE_TARGET, msLeft);
 
     if (total >= LIVE_RACE_TARGET) {
-      this._launchLiveRace(0);
+      this._launchLiveRace(0, true);
     } else if (msLeft <= 0) {
-      this._launchLiveRace(Math.max(0, LIVE_RACE_TARGET - total));
+      this._launchLiveRace(Math.max(0, LIVE_RACE_TARGET - total), true);
     }
   }
 
@@ -573,9 +591,12 @@ class Game {
       this.danger = Math.min(1, this.danger + dt * 0.6);
     }
 
-    // Keep the pack racing on in the background for drama.
+    // Keep the pack racing on in the background for drama. Keep broadcasting
+    // our (stopped) position too, so rivals see a wreck/finisher instead of a
+    // racer that silently vanishes.
     if (this._isRace()) {
       this.bots.update(dt, this.time, this.ship.z, this.speed);
+      if (this.mode === 'live') this.arena.broadcast(this.ship.z, this.ship.u, this.ship.v, this.speed);
       this.arena.update(this.ship.z);
     }
 
