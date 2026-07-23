@@ -77,7 +77,7 @@ Then open **http://localhost:8080** and press **Space** (or tap) to launch.
 | Post FX | `src/postfx.js` | A neon glow pass + chromatic aberration, vignette, film grain and the rift-danger red pulse. |
 | Input | `src/input.js` | Keyboard, mouse-steer and touch (floating joystick + boost pad) folded into one set of axes. |
 | Leaderboard | `src/leaderboard.js` | Global guest leaderboard over Supabase REST (plain `fetch`, no SDK). Submits a finished run and pulls the top scores; fails safe offline. |
-| Bots | `src/bots.js` | Real AI opponents — each integrates the same lateral/vertical flight physics as the player (accel, damping, velocity clamps), makes independent boost decisions against a real meter, paces off the player's exact speed-ramp formula evaluated against its own distance, and can genuinely crash into a wall or the floor. Not a scripted puppet. |
+| Bots | `src/bots.js` | Real AI opponents — each integrates the same lateral/vertical flight physics as the player (accel, damping, velocity clamps), looks ahead along the corridor to steer toward a safe lane inside a personal lateral preference that drifts over the run, matches the player's speed exactly, and can genuinely crash into a wall or the floor. Not a scripted puppet. |
 | Live arena | `src/realtime.js` | Live multiplayer over Supabase Realtime broadcast (raw WebSocket, Phoenix protocol). A room is just a channel named by its code, so HOST/JOIN with the same code land in the same race. |
 | Ghost craft | `src/ghost.js` | The lightweight neon wireframe + name label used for both bots and live players. |
 | Camera / loop / scoring | `src/main.js` | The state machine (menu / lobby / playing / dead), boost/rift economy, the speed-drunk multi-view camera, and the SOLO / BOT RACE / LIVE RACE modes. |
@@ -91,6 +91,16 @@ Then open **http://localhost:8080** and press **Space** (or tap) to launch.
 - **Identity: just a name** — no accounts or login. Enter a pilot name and it's saved automatically. Under the hood each browser gets a stable hidden `player_id`; your leaderboard row is keyed by that id, so **renaming carries your record to the new name**, and two players who type the **same name stay separate** (different ids) with no data confusion.
 
 > The Supabase URL + publishable key live in `src/leaderboard.js`. These are **public client credentials** by design; the data is protected by row-level security on the server.
+
+### Bring your own AI
+
+`ai-pilot/` is a standalone, zero-dependency Node script that pilots a real
+racer — same physics, collision and boost economy as a human — and joins a
+Live Race room over the wire, showing up as a normal named racer (no `BOT`
+tag). Write a `decide(state) -> {ax, ay, boost}` function — rule-based, a
+trained model, or an LLM call per tick — and run it with `npm run ai-pilot --
+--room ABCD`. See `ai-pilot/README.md` for the full protocol and a worked
+example.
 
 All tuning lives in **`src/config.js`** — speeds, camera feel, glow, fog, colours.
 
