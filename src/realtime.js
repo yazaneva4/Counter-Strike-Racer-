@@ -1,14 +1,14 @@
 // Live multiplayer "arena" over Supabase Realtime broadcast (raw WebSocket,
-// Phoenix channel protocol -- no SDK to vendor). Everyone in Race mode joins one
-// public channel, broadcasts their ship state ~10x/sec, and sees everyone else
-// as ghost craft. There is no matchmaking or authoritative server: it's a shared
-// arena. All of it is wrapped so a blocked socket just means "no rivals online".
+// Phoenix channel protocol -- no SDK to vendor). A room is just a channel named
+// by its code, so HOST/JOIN with the same code land in the same race and see
+// each other as ghost craft; different codes never see each other. There is no
+// matchmaking or authoritative server -- it's a shared arena per room code, and
+// everything is wrapped so a blocked socket just means "no rivals online".
 
 import { SUPA_URL, SUPA_KEY } from './leaderboard.js';
 import { Ghost, colorForId } from './ghost.js';
 
 const WS_URL = SUPA_URL.replace(/^http/, 'ws') + '/realtime/v1/websocket?apikey=' + SUPA_KEY + '&vsn=1.0.0';
-const TOPIC = 'realtime:csr-arena';
 const SEND_INTERVAL = 100;   // ms between position broadcasts (~10 Hz)
 const STALE_MS = 3500;       // drop players we haven't heard from in this long
 
@@ -20,13 +20,16 @@ export class Arena {
     this.ref = 0;
     this.id = Math.random().toString(36).slice(2, 10);
     this.name = 'PLAYER';
+    this.topic = 'realtime:csr-arena';
     this.players = new Map(); // id -> { name, z, u, v, speed, lastSeen, ghost }
     this._hb = null;
     this._lastSend = 0;
   }
 
-  connect(name) {
+  // `code` scopes this connection to a specific room (host/join share a code).
+  connect(name, code) {
     this.name = name || 'PLAYER';
+    this.topic = 'realtime:csr-room-' + (code ? String(code).toUpperCase() : 'default');
     if (this.ws) return;
     try {
       this.ws = new WebSocket(WS_URL);
@@ -46,11 +49,11 @@ export class Arena {
 
   _join() {
     this._send({
-      topic: TOPIC, event: 'phx_join', ref: String(++this.ref),
+      topic: this.topic, event: 'phx_join', ref: String(++this.ref),
       payload: { config: { broadcast: { self: false, ack: false }, presence: { key: this.id }, private: false } },
     });
     // Authorise the socket (harmless for a public channel).
-    this._send({ topic: TOPIC, event: 'access_token', ref: String(++this.ref), payload: { access_token: SUPA_KEY } });
+    this._send({ topic: this.topic, event: 'access_token', ref: String(++this.ref), payload: { access_token: SUPA_KEY } });
     if (this._hb) clearInterval(this._hb);
     this._hb = setInterval(() => this._send({ topic: 'phoenix', event: 'heartbeat', ref: String(++this.ref), payload: {} }), 25000);
   }
@@ -58,10 +61,11 @@ export class Arena {
   _onMessage(e) {
     let msg;
     try { msg = JSON.parse(e.data); } catch (err) { return; }
-    if (msg.topic === TOPIC && msg.event === 'phx_reply' && msg.payload && msg.payload.status === 'ok') {
+    if (msg.topic === this.topic && msg.event === 'phx_reply' && msg.payload && msg.payload.status === 'ok') {
       this.joined = true;
       return;
     }
+    if (msg.topic !== this.topic) return;   // ignore any stray cross-room traffic
     if (msg.event === 'broadcast' && msg.payload && msg.payload.event === 'pos') {
       const p = msg.payload.payload;
       if (!p || !p.id || p.id === this.id) return;
@@ -76,14 +80,15 @@ export class Arena {
     }
   }
 
-  // Broadcast the local ship state (rate-limited internally).
+  // Broadcast the local ship state (rate-limited internally). Also doubles as
+  // the lobby "I'm here" heartbeat -- call it with zeros while waiting.
   broadcast(z, u, v, speed) {
     if (!this.joined) return;
     const now = performance.now();
     if (now - this._lastSend < SEND_INTERVAL) return;
     this._lastSend = now;
     this._send({
-      topic: TOPIC, event: 'broadcast', ref: String(++this.ref),
+      topic: this.topic, event: 'broadcast', ref: String(++this.ref),
       payload: { type: 'broadcast', event: 'pos', payload: { id: this.id, name: this.name, z, u, v, speed } },
     });
   }

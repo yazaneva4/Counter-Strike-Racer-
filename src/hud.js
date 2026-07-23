@@ -30,7 +30,23 @@ export class HUD {
     this.submitStatus = this.$('submitStatus');
     this.leaderboard = this.$('leaderboard');
     this.raceInfo = this.$('raceInfo');
-    this.boostMeter = document.querySelector('.meter.boost');
+    this.modeBtns = document.querySelector('.modebtns');
+    this.lbWrap = document.querySelector('.lb-wrap');
+
+    // Live Race: host-or-join panel.
+    this.liveSelect = this.$('liveSelect');
+    this.btnHost = this.$('btnHost');
+    this.joinCode = this.$('joinCode');
+    this.btnJoin = this.$('btnJoin');
+    this.btnLiveBack = this.$('btnLiveBack');
+
+    // Live Race: waiting-room panel.
+    this.lobbyPanel = this.$('lobbyPanel');
+    this.lobbyCode = this.$('lobbyCode');
+    this.lobbyCountNum = this.$('lobbyCountNum');
+    this.lobbyTarget = this.$('lobbyTarget');
+    this.lobbyTimer = this.$('lobbyTimer');
+    this.btnLeaveLobby = this.$('btnLeaveLobby');
   }
 
   setCamMode(mode) {
@@ -42,7 +58,7 @@ export class HUD {
   setName(name) { if (this.menuName) this.menuName.value = name || ''; }
   getNameValue() { return this.menuName ? this.menuName.value.trim() : ''; }
 
-  bindMenu({ onName, onCommit, onSolo, onBots, onLive }) {
+  bindMenu({ onName, onCommit, onSolo, onBots, onHost, onJoin, onLeaveLobby }) {
     if (this.menuName) {
       this.menuName.addEventListener('input', () => onName && onName(this.menuName.value));
       this.menuName.addEventListener('change', () => onCommit && onCommit(this.menuName.value));
@@ -52,12 +68,61 @@ export class HUD {
     const go = (fn) => (e) => { e.stopPropagation(); if (this.menuName) this.menuName.blur(); fn && fn(); };
     if (this.btnSolo) this.btnSolo.addEventListener('click', go(onSolo));
     if (this.btnBots) this.btnBots.addEventListener('click', go(onBots));
-    if (this.btnLive) this.btnLive.addEventListener('click', go(onLive));
+
+    // LIVE RACE opens the host-or-join panel (pure UI, no game-state change).
+    if (this.btnLive) this.btnLive.addEventListener('click', (e) => { e.stopPropagation(); this.showLiveSelect(); });
+    if (this.btnLiveBack) this.btnLiveBack.addEventListener('click', (e) => { e.stopPropagation(); this.hideLiveSelect(); });
+
+    if (this.btnHost) this.btnHost.addEventListener('click', go(onHost));
+    const doJoin = () => { onJoin && onJoin(this.joinCode ? this.joinCode.value : ''); };
+    if (this.btnJoin) this.btnJoin.addEventListener('click', (e) => { e.stopPropagation(); if (this.menuName) this.menuName.blur(); doJoin(); });
+    if (this.joinCode) {
+      this.joinCode.addEventListener('click', (e) => e.stopPropagation());
+      this.joinCode.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doJoin(); } });
+    }
+    if (this.btnLeaveLobby) this.btnLeaveLobby.addEventListener('click', go(onLeaveLobby));
   }
 
-  // Hide the boost meter + pad when boost is disabled (Bot Race).
-  setBoostEnabled(on) {
-    if (this.hudRoot) this.hudRoot.classList.toggle('no-boost', !on);
+  // ---- Live Race: host-or-join panel ------------------------------------
+  showLiveSelect() {
+    if (this.modeBtns) this.modeBtns.style.display = 'none';
+    if (this.submitStatus) this.submitStatus.style.display = 'none';
+    if (this.lbWrap) this.lbWrap.style.display = 'none';
+    if (this.liveSelect) this.liveSelect.style.display = 'flex';
+    if (this.joinCode) this.joinCode.value = '';
+  }
+  hideLiveSelect() {
+    if (this.liveSelect) this.liveSelect.style.display = 'none';
+    if (this.modeBtns) this.modeBtns.style.display = '';
+    if (this.submitStatus) this.submitStatus.style.display = '';
+    if (this.lbWrap) this.lbWrap.style.display = '';
+  }
+
+  // ---- Live Race: waiting-room panel -------------------------------------
+  showLobby(code) {
+    this.hideLiveSelect();
+    this.overlay.className = 'show lobby';
+    if (this.menuName && this.menuName.closest('.namerow')) this.menuName.closest('.namerow').style.display = 'none';
+    if (this.modeBtns) this.modeBtns.style.display = 'none';
+    if (this.submitStatus) this.submitStatus.style.display = 'none';
+    if (this.lbWrap) this.lbWrap.style.display = 'none';
+    if (this.overlayHint) this.overlayHint.style.display = 'none';
+    if (this.lobbyCode) this.lobbyCode.textContent = code || '';
+    if (this.lobbyPanel) this.lobbyPanel.style.display = 'flex';
+  }
+  hideLobby() {
+    if (this.lobbyPanel) this.lobbyPanel.style.display = 'none';
+    const nameRow = this.menuName && this.menuName.closest('.namerow');
+    if (nameRow) nameRow.style.display = '';
+    if (this.modeBtns) this.modeBtns.style.display = '';
+    if (this.submitStatus) this.submitStatus.style.display = '';
+    if (this.lbWrap) this.lbWrap.style.display = '';
+    if (this.overlayHint) this.overlayHint.style.display = '';
+  }
+  updateLobby(count, target, msLeft) {
+    if (this.lobbyCountNum) this.lobbyCountNum.textContent = String(count);
+    if (this.lobbyTarget) this.lobbyTarget.textContent = String(target);
+    if (this.lobbyTimer) this.lobbyTimer.textContent = fmtTime(msLeft / 1000);
   }
 
   // ---- Live race standings ---------------------------------------------
@@ -120,6 +185,8 @@ export class HUD {
 
   // ---- Overlays --------------------------------------------------------
   showMenu(best) {
+    this.hideLobby();
+    this.hideLiveSelect();
     this.overlay.className = 'show menu';
     this.overlayTitle.innerHTML = 'COUNTER STRIKE <span class="accent">RACER</span>';
     this.overlaySub.textContent = 'Neon Canyon Hyperracer';
@@ -144,6 +211,8 @@ export class HUD {
   }
 
   showGameOver(r) {
+    this.hideLobby();
+    this.hideLiveSelect();
     this.overlay.className = 'show over' + (r.finished ? ' finish' : '');
     // First stat cell varies: a finished race shows TIME, otherwise STYLE.
     let firstCell = `<div><span>STYLE</span><b>${Math.floor(r.style).toLocaleString()}</b></div>`;

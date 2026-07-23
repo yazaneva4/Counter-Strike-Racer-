@@ -311,7 +311,7 @@ body.touch #hud.active #boostBtn { display: block; }
 
 /* -------------------------------------------------- Menu: name + modes --- */
 #menuBlock { display: none; flex-direction: column; align-items: center; gap: 16px; margin-top: 22px; }
-.show.menu #menuBlock, .show.over #menuBlock { display: flex; }
+.show.menu #menuBlock, .show.over #menuBlock, .show.lobby #menuBlock { display: flex; }
 
 .namerow { display: flex; align-items: center; gap: 12px; }
 .namerow .label { color: var(--cyan); }
@@ -374,9 +374,54 @@ body.touch #hud.active #boostBtn { display: block; }
 }
 .modebtn.live:hover { box-shadow: 0 0 30px rgba(57, 255, 138, 0.55), inset 0 0 18px rgba(57, 255, 138, 0.22); }
 
-/* Bot Race has no boost -- hide the meter and the touch pad. */
-#hud.no-boost .meter.boost { display: none; }
-body.touch #hud.no-boost.active #boostBtn { display: none; }
+/* ------------------------------------------------ Live Race: host/join --- */
+#liveSelect, #lobbyPanel { display: none; }
+.live-select { flex-direction: column; align-items: center; gap: 12px; margin-top: 4px; }
+.ls-title {
+  font-size: 12px; letter-spacing: 0.28em; text-transform: uppercase; color: #7fb6cc;
+}
+.ls-row { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; justify-content: center; }
+.ls-join { display: flex; gap: 8px; align-items: center; }
+#joinCode {
+  width: 100px;
+  padding: 10px 12px;
+  background: rgba(255, 43, 191, 0.06);
+  border: 1px solid rgba(255, 43, 191, 0.5);
+  border-radius: 8px;
+  color: #ffe6fb;
+  font-family: var(--font);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-align: center;
+  text-transform: uppercase;
+  outline: none;
+}
+#joinCode:focus { border-color: var(--magenta); box-shadow: 0 0 14px rgba(255, 43, 191, 0.4); }
+#joinCode::placeholder { color: #8a5a78; letter-spacing: 0.12em; }
+
+.linkbtn {
+  background: none; border: none;
+  color: #7fb6cc; font-family: var(--font); font-size: 13px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  cursor: pointer; pointer-events: auto; padding: 4px 8px;
+}
+.linkbtn:hover { color: var(--cyan); }
+
+/* ------------------------------------------------ Live Race: lobby wait --- */
+.lobby-panel { flex-direction: column; align-items: center; gap: 10px; margin-top: 6px; }
+.lobby-title {
+  font-size: 15px; letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--green); text-shadow: 0 0 12px rgba(57, 255, 138, 0.5);
+  animation: dangerPulse 1.6s ease-in-out infinite;
+}
+.lobby-code {
+  font-size: 13px; letter-spacing: 0.16em; text-transform: uppercase; color: #b9a9d6;
+}
+.lobby-code span { color: #fff; font-weight: 800; letter-spacing: 0.3em; }
+.lobby-count { font-size: 22px; font-weight: 800; color: #fff; text-shadow: 0 0 12px rgba(57, 255, 138, 0.5); }
+.lobby-sub { font-size: 13px; letter-spacing: 0.1em; color: #9fb6c6; }
+.lobby-sub span { color: var(--gold); font-weight: 700; }
 
 .submit-status {
   min-height: 16px;

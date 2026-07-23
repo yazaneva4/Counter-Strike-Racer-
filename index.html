@@ -68,6 +68,29 @@
           <button id="btnLive" class="modebtn live">LIVE RACE</button>
         </div>
         <div id="submitStatus" class="submit-status"></div>
+
+        <!-- Live Race: choose to host a room or join one by code -->
+        <div id="liveSelect" class="live-select">
+          <div class="ls-title">HOST OR JOIN A LIVE RACE</div>
+          <div class="ls-row">
+            <button id="btnHost" class="modebtn live">HOST</button>
+            <div class="ls-join">
+              <input id="joinCode" type="text" maxlength="5" placeholder="CODE" autocomplete="off"
+                     autocapitalize="characters" spellcheck="false" />
+              <button id="btnJoin" class="modebtn race">JOIN</button>
+            </div>
+          </div>
+          <button id="btnLiveBack" class="linkbtn">&larr; back</button>
+        </div>
+
+        <!-- Live Race: waiting room before the race starts -->
+        <div id="lobbyPanel" class="lobby-panel">
+          <div class="lobby-title">WAITING FOR RACERS</div>
+          <div class="lobby-code">ROOM CODE <span id="lobbyCode"></span></div>
+          <div class="lobby-count"><span id="lobbyCountNum">1</span> / <span id="lobbyTarget">4</span> racers</div>
+          <div class="lobby-sub">Bots fill the empty seats in <span id="lobbyTimer">5:00</span></div>
+          <button id="btnLeaveLobby" class="linkbtn">leave</button>
+        </div>
       </div>
 
       <!-- Global leaderboard -->
