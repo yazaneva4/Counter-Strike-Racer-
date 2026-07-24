@@ -23,7 +23,6 @@ import { fetchTop, submitScore, getName, setName, pushName, getPlayerId } from '
 const BEST_KEY = 'riftbreak_best';
 const CAM_ORDER = ['third', 'first'];
 const CAM_LABEL = { third: '3RD PERSON', first: '1ST PERSON' };
-const RACE_BOTS = 5;                 // AI rivals in Bot Race
 const LIVE_RACE_TARGET = 4;          // total racers (real + fill-in bots) for Live Race
 const LOBBY_WAIT_MS = 60 * 1000; // how long the lobby waits before bots fill empty seats
 
@@ -106,7 +105,6 @@ class Game {
         this._refreshLeaderboard(this.playerName);
       },
       onSolo: () => this._startGame('solo'),
-      onBots: () => this._startGame('bots'),
       onHost: () => this._hostLive(),
       onJoin: (code) => this._joinLive(code),
       onLeaveLobby: () => this._leaveLobby(),
@@ -155,14 +153,14 @@ class Game {
     this.won = false;
   }
 
-  // 'bots' (AI race) and 'live' (real-time race) are both races. Boost is
-  // available in every mode -- Solo, Bot Race and Live Race alike.
-  _isRace() { return this.mode === 'bots' || this.mode === 'live'; }
+  // Only Live Race is a competitive race (real players + fill-in bots). Boost
+  // is available in every mode -- Solo and Live Race alike.
+  _isRace() { return this.mode === 'live'; }
 
-  // Starts Solo or Bot Race immediately. Live Race goes through the
-  // host/join lobby instead (see _hostLive/_joinLive/_launchLiveRace).
-  _startGame(mode) {
-    this.mode = mode === 'bots' ? 'bots' : 'solo';
+  // Starts a Solo run immediately. Live Race goes through the host/join lobby
+  // instead (see _hostLive/_joinLive/_launchLiveRace).
+  _startGame() {
+    this.mode = 'solo';
     this.audio.init();
     this.audio.resume();
     this.input.consumeAction(); // clear any queued press so we start clean
@@ -176,18 +174,12 @@ class Game {
 
     this.bots.clear();
     this.arena.disconnect();
-    if (this.mode === 'bots') {
-      this.bots.spawn(RACE_BOTS, this.ship.z);        // AI rivals only
-      this.finish.place(CFG.raceFinish);
-      this.finish.setVisible(true);
-    } else {
-      this.finish.setVisible(false);
-      this.hud.hideRace();
-    }
+    this.finish.setVisible(false);
+    this.hud.hideRace();
 
     this._submitted = false;
     this.rank = 1;
-    this.fieldSize = 1 + (this.mode === 'bots' ? RACE_BOTS : 0);
+    this.fieldSize = 1;
     this.liveCount = 0;
 
     this.state = 'playing';
@@ -410,9 +402,9 @@ class Game {
     this.boostVis += (0 - this.boostVis) * Math.min(1, dt * 4);
     this.danger = 0;
 
-    // SPACE re-launches the last mode; Live Race always goes through the
-    // host/join lobby, so it isn't something a bare key-press can jump into.
-    if (this.input.consumeAction()) this._startGame(this.mode === 'live' ? 'solo' : this.mode);
+    // SPACE launches a Solo run; Live Race always goes through the host/join
+    // lobby, so it isn't something a bare key-press can jump into.
+    if (this.input.consumeAction()) this._startGame();
   }
 
   // Waiting room before a Live Race: attract-style cruise, a lobby heartbeat
@@ -603,7 +595,7 @@ class Game {
     // Live Race can't be instantly restarted with a key-press -- it always
     // goes back through the host/join lobby.
     if (this.deadTimer > 0.7 && this.mode !== 'live' && this.input.consumeAction()) {
-      this._startGame(this.mode);
+      this._startGame();
     }
   }
 

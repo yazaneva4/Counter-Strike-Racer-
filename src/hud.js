@@ -25,7 +25,6 @@ export class HUD {
     // Menu / leaderboard / race chrome.
     this.menuName = this.$('menuName');
     this.btnSolo = this.$('btnSolo');
-    this.btnBots = this.$('btnBots');
     this.btnLive = this.$('btnLive');
     this.submitStatus = this.$('submitStatus');
     this.leaderboard = this.$('leaderboard');
@@ -58,7 +57,7 @@ export class HUD {
   setName(name) { if (this.menuName) this.menuName.value = name || ''; }
   getNameValue() { return this.menuName ? this.menuName.value.trim() : ''; }
 
-  bindMenu({ onName, onCommit, onSolo, onBots, onHost, onJoin, onLeaveLobby }) {
+  bindMenu({ onName, onCommit, onSolo, onHost, onJoin, onLeaveLobby }) {
     if (this.menuName) {
       this.menuName.addEventListener('input', () => onName && onName(this.menuName.value));
       this.menuName.addEventListener('change', () => onCommit && onCommit(this.menuName.value));
@@ -67,7 +66,6 @@ export class HUD {
     }
     const go = (fn) => (e) => { e.stopPropagation(); if (this.menuName) this.menuName.blur(); fn && fn(); };
     if (this.btnSolo) this.btnSolo.addEventListener('click', go(onSolo));
-    if (this.btnBots) this.btnBots.addEventListener('click', go(onBots));
 
     // LIVE RACE opens the host-or-join panel (pure UI, no game-state change).
     if (this.btnLive) this.btnLive.addEventListener('click', (e) => { e.stopPropagation(); this.showLiveSelect(); });
@@ -206,7 +204,7 @@ export class HUD {
          <span><b>Hold</b> still &nbsp;or the BOOST pad to accelerate</span>
          <span><b>Double-tap</b> &nbsp;to switch camera view</span>
        </div>
-       <div class="launch">Pick <b>SOLO</b>, <b>BOT RACE</b> or <b>LIVE RACE</b><span class="desktop-only"> — or <b>SPACE</b> for Solo</span></div>`;
+       <div class="launch">Pick <b>SOLO</b> or <b>LIVE RACE</b><span class="desktop-only"> — or <b>SPACE</b> for Solo</span></div>`;
     this.hudRoot.classList.remove('active');
   }
 
