@@ -80,16 +80,15 @@ Then open **http://localhost:8080** and press **Space** (or tap) to launch.
 | Post FX | `src/postfx.js` | A neon glow pass + chromatic aberration, vignette, film grain and the rift-danger red pulse. |
 | Input | `src/input.js` | Keyboard, mouse-steer and touch (floating joystick, hold-to-boost, double-tap camera cycle, boost pad) folded into one set of axes. |
 | Leaderboard | `src/leaderboard.js` | Global guest leaderboard over Supabase REST (plain `fetch`, no SDK). Submits a finished run and pulls the top scores; fails safe offline. |
-| Bots | `src/bots.js` | Real AI opponents — each integrates the same lateral/vertical flight physics as the player (accel, damping, velocity clamps), looks ahead along the corridor to steer toward a safe lane inside a personal lateral preference that drifts over the run, matches the player's speed exactly, and can genuinely crash into a wall or the floor. Not a scripted puppet. |
 | Live arena | `src/realtime.js` | Live multiplayer over Supabase Realtime broadcast (raw WebSocket, Phoenix protocol). A room is just a channel named by its code, so HOST/JOIN with the same code land in the same race. |
-| Ghost craft | `src/ghost.js` | The lightweight neon wireframe + name label used for both bots and live players. |
+| Ghost craft | `src/ghost.js` | The lightweight neon wireframe + name label used for live players in a race. |
 | Camera / loop / scoring | `src/main.js` | The state machine (menu / lobby / playing / dead), boost/rift economy, the speed-drunk multi-view camera, and the SOLO / LIVE RACE modes. |
 
 ### Online play
 
 - **Modes** — pick **SOLO RUN** (endless time-trial) or **LIVE RACE** (host/join real people) from the menu after entering a pilot name. Boost is available in every mode.
-- **Race to the finish** — Live Race is a sprint to a **finish line** (`CFG.raceFinish`, 5 km). Cross it to win; your finishing **position and time** are shown. Still outrun the rift and don't crash. Fill-in bots wear a `BOT` name tag so real players are always easy to tell apart.
-- **Live Race: host or join** — clicking LIVE RACE offers **HOST** (generates a short room code) or **JOIN** (enter a code) — matching codes land in the same room. The lobby shows a live headcount and a 1-minute countdown. If **4 or more** racers (real people) are present, the race starts for real; if the minute runs out first, real-physics **bots fill the empty seats** (same pace formula as the player) so the race always launches.
+- **Race to the finish** — Live Race is a sprint to a **finish line** (`CFG.raceFinish`, 5 km). Cross it to win; your finishing **position and time** are shown. Still outrun the rift and don't crash.
+- **Live Race: host or join** — clicking LIVE RACE offers **HOST** (generates a short room code) or **JOIN** (enter a code) — matching codes land in the same room. The lobby shows a live headcount and a 1-minute countdown. If **4 or more** real racers gather, the race starts immediately; otherwise it launches when the countdown runs out with whoever's in the room (race solo against the finish line if you're the only one).
 - **Global leaderboard** — one row per player (your best), shown on the menu and result screens. Backed by a Supabase table (`csr_leaderboard`) with row-level security and value constraints; the client uses the project's **publishable** key (safe to ship) and reads/writes over REST.
 - **Identity: just a name** — no accounts or login. Enter a pilot name and it's saved automatically. Under the hood each browser gets a stable hidden `player_id`; your leaderboard row is keyed by that id, so **renaming carries your record to the new name**, and two players who type the **same name stay separate** (different ids) with no data confusion.
 

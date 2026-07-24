@@ -15,7 +15,6 @@ import { Particles } from './particles.js';
 import { PostFX } from './postfx.js';
 import { HUD } from './hud.js';
 import { Audio } from './audio.js';
-import { Bots } from './bots.js';
 import { Arena } from './realtime.js';
 import { Finish } from './finish.js';
 import { fetchTop, submitScore, getName, setName, pushName, getPlayerId } from './leaderboard.js';
@@ -23,8 +22,8 @@ import { fetchTop, submitScore, getName, setName, pushName, getPlayerId } from '
 const BEST_KEY = 'riftbreak_best';
 const CAM_ORDER = ['third', 'first'];
 const CAM_LABEL = { third: '3RD PERSON', first: '1ST PERSON' };
-const LIVE_RACE_TARGET = 4;          // total racers (real + fill-in bots) for Live Race
-const LOBBY_WAIT_MS = 60 * 1000; // how long the lobby waits before bots fill empty seats
+const LIVE_RACE_TARGET = 4;          // real racers that start the race instantly
+const LOBBY_WAIT_MS = 60 * 1000; // how long the lobby waits before starting with whoever's here
 
 // A short, unambiguous room code (no 0/O/1/I) for hosting a Live Race lobby.
 function genRoomCode() {
@@ -55,7 +54,6 @@ class Game {
     this.input = new Input();
     this.hud = new HUD();
     this.audio = new Audio();
-    this.bots = new Bots(this.scene);
     this.arena = new Arena(this.scene);
     this.finish = new Finish(this.scene);
 
@@ -153,8 +151,8 @@ class Game {
     this.won = false;
   }
 
-  // Only Live Race is a competitive race (real players + fill-in bots). Boost
-  // is available in every mode -- Solo and Live Race alike.
+  // Only Live Race is a competitive race (real players only). Boost is
+  // available in every mode -- Solo and Live Race alike.
   _isRace() { return this.mode === 'live'; }
 
   // Starts a Solo run immediately. Live Race goes through the host/join lobby
@@ -172,7 +170,6 @@ class Game {
     if (typed) this.playerName = setName(typed);
     if (!this.playerName) this.playerName = setName('PLAYER');
 
-    this.bots.clear();
     this.arena.disconnect();
     this.finish.setVisible(false);
     this.hud.hideRace();
@@ -213,7 +210,6 @@ class Game {
     if (typed) this.playerName = setName(typed);
     if (!this.playerName) this.playerName = setName('PLAYER');
 
-    this.bots.clear();
     this.finish.setVisible(false);
     this.hud.hideRace();
 
@@ -221,8 +217,7 @@ class Game {
     // When anyone else in the room launches, we launch at the same moment.
     this.arena.onGo = () => {
       if (this.state !== 'lobby') return;
-      const total = 1 + this.arena.count();
-      this._launchLiveRace(Math.max(0, LIVE_RACE_TARGET - total));
+      this._launchLiveRace();
     };
     this.arena.connect(this.playerName, this.roomCode);
 
@@ -239,22 +234,19 @@ class Game {
     this.hud.setName(this.playerName);
   }
 
-  // Race begins for real: `extraBots` real-physics bots fill any empty seats
-  // up to LIVE_RACE_TARGET (0 if enough live players already showed up).
+  // Race begins for real, against whichever live players are in the room.
   // `announce` broadcasts "go" so everyone else in the lobby starts too.
-  _launchLiveRace(extraBots, announce = false) {
+  _launchLiveRace(announce = false) {
     if (announce) this.arena.sendGo();
     this._resetRun();
     this.ship.setVisible(this.cameraMode !== 'first');
 
-    this.bots.clear();
-    if (extraBots > 0) this.bots.spawn(extraBots, this.ship.z);
     this.finish.place(CFG.raceFinish);
     this.finish.setVisible(true);
 
     this._submitted = false;
     this.rank = 1;
-    this.fieldSize = 1 + this.bots.count() + this.arena.count();
+    this.fieldSize = 1 + this.arena.count();
     this.liveCount = this.arena.count();
 
     this.hud.hideLobby();
@@ -433,16 +425,16 @@ class Game {
     if (roomDeadline > 0 && roomDeadline < this.lobbyDeadline) this.lobbyDeadline = roomDeadline;
 
     // If the race is already running in this room, jump straight in.
-    if (this.arena.raceInProgress()) { this._launchLiveRace(0); return; }
+    if (this.arena.raceInProgress()) { this._launchLiveRace(); return; }
 
     const total = 1 + this.arena.count();
     const msLeft = Math.max(0, this.lobbyDeadline - Date.now());
     this.hud.updateLobby(total, LIVE_RACE_TARGET, msLeft);
 
-    if (total >= LIVE_RACE_TARGET) {
-      this._launchLiveRace(0, true);
-    } else if (msLeft <= 0) {
-      this._launchLiveRace(Math.max(0, LIVE_RACE_TARGET - total), true);
+    // Start early once enough real racers gather, or when the wait runs out --
+    // whoever's in the room at that point is the field.
+    if (total >= LIVE_RACE_TARGET || msLeft <= 0) {
+      this._launchLiveRace(true);
     }
   }
 
@@ -504,10 +496,9 @@ class Game {
     this.ship.tailWorld(this._look);
     this.particles.trail(this._look, this.boostVis);
 
-    // Race rivals: AI bots + live players, and your place in the pack.
+    // Race rivals: the live players in the room, and your place in the pack.
     if (this._isRace()) {
       this.raceTime += dt;
-      this.bots.update(dt, this.time, this.ship.z, this.speed);
       this.arena.broadcast(this.ship.z, this.ship.u, this.ship.v, this.speed);
       this.arena.update(this.ship.z);
       this._computeRank();
@@ -550,12 +541,11 @@ class Game {
     this._submitScore();
   }
 
-  // Your position among all rivals (bots + live players), by distance.
+  // Your position among all live rivals, by distance.
   _computeRank() {
     const pz = this.ship.z;
     let ahead = 0;
     let field = 1;
-    for (const z of this.bots.positions()) { field++; if (z > pz) ahead++; }
     for (const z of this.arena.positions()) { field++; if (z > pz) ahead++; }
     this.rank = ahead + 1;
     this.fieldSize = field;
@@ -583,12 +573,10 @@ class Game {
       this.danger = Math.min(1, this.danger + dt * 0.6);
     }
 
-    // Keep the pack racing on in the background for drama. Keep broadcasting
-    // our (stopped) position too, so rivals see a wreck/finisher instead of a
-    // racer that silently vanishes.
+    // Keep broadcasting our (stopped) position so rivals see a wreck/finisher
+    // instead of a racer that silently vanishes, and keep their ghosts moving.
     if (this._isRace()) {
-      this.bots.update(dt, this.time, this.ship.z, this.speed);
-      if (this.mode === 'live') this.arena.broadcast(this.ship.z, this.ship.u, this.ship.v, this.speed);
+      this.arena.broadcast(this.ship.z, this.ship.u, this.ship.v, this.speed);
       this.arena.update(this.ship.z);
     }
 

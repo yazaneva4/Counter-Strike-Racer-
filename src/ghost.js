@@ -1,6 +1,6 @@
-// A lightweight "ghost" craft used for both AI bots and live remote players.
-// It's a cheap neon wireframe (so many can be on screen at once) with a floating
-// name label that always faces the camera. Positioned in canyon-local space just
+// A lightweight "ghost" craft used for live remote players in a race. It's a
+// cheap neon wireframe (so many can be on screen at once) with a floating name
+// label that always faces the camera. Positioned in canyon-local space just
 // like the player, so it threads the same corridor.
 
 import * as THREE from 'three';
