@@ -94,16 +94,6 @@ Then open **http://localhost:8080** and press **Space** (or tap) to launch.
 
 > The Supabase URL + publishable key live in `src/leaderboard.js`. These are **public client credentials** by design; the data is protected by row-level security on the server.
 
-### Bring your own AI
-
-`ai-pilot/` is a standalone, zero-dependency Node script that pilots a real
-racer — same physics, collision and boost economy as a human — and joins a
-Live Race room over the wire, showing up as a normal named racer (no `BOT`
-tag). Write a `decide(state) -> {ax, ay, boost}` function — rule-based, a
-trained model, or an LLM call per tick — and run it with `npm run ai-pilot --
---room ABCD`. See `ai-pilot/README.md` for the full protocol and a worked
-example.
-
 All tuning lives in **`src/config.js`** — speeds, camera feel, glow, fog, colours.
 
 ### Rendering & compatibility

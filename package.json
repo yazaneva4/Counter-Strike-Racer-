@@ -6,8 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node serve.js",
-    "dev": "node serve.js",
-    "ai-pilot": "node ai-pilot/pilot.mjs"
+    "dev": "node serve.js"
   },
   "keywords": [
     "three.js",
