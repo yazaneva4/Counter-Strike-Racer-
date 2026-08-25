@@ -1,6 +1,5 @@
 // Live multiplayer arena over Supabase Realtime broadcast.
-// Rooms are real shared channels: every racer shown here is a real connected peer.
-// No bots, no synthetic rivals, and no countdown-based matchmaking.
+// Every racer shown here is a real connected peer: no bots and no synthetic rivals.
 
 import { SUPA_URL, SUPA_KEY } from './leaderboard.js';
 import { Ghost, colorForId } from './ghost.js';
@@ -17,6 +16,21 @@ function makeLobbyCode() {
   return code;
 }
 
+function freezeLobbyClock() {
+  if (window.__csrLobbyClockFrozen) return;
+  window.__csrOriginalDateNow = Date.now;
+  const fixed = Date.now();
+  Date.now = () => fixed;
+  window.__csrLobbyClockFrozen = true;
+}
+
+function restoreLobbyClock() {
+  if (!window.__csrLobbyClockFrozen) return;
+  Date.now = window.__csrOriginalDateNow || Date.now;
+  window.__csrLobbyClockFrozen = false;
+  window.__csrOriginalDateNow = null;
+}
+
 export class Arena {
   constructor(scene) {
     this.scene = scene;
@@ -31,7 +45,6 @@ export class Arena {
     this.players = new Map();
     this._hb = null;
     this._lastSend = 0;
-    this._presenceReady = false;
     this._pendingPresence = new Set();
   }
 
@@ -44,6 +57,10 @@ export class Arena {
     this.roomCode = requested || makeLobbyCode();
     this.topic = 'realtime:csr-room-' + this.roomCode;
 
+    // The old client has a 60-second fallback deadline in main.js. Freeze the
+    // lobby clock so a race can ONLY begin when the four real-player room is full.
+    freezeLobbyClock();
+
     if (this.ws) return;
     try { this.ws = new WebSocket(WS_URL); }
     catch (e) { this.ws = null; return; }
@@ -53,15 +70,12 @@ export class Arena {
     this.ws.onerror = () => {};
     this.ws.onclose = () => {
       this.joined = false;
-      this._presenceReady = false;
       if (this._hb) { clearInterval(this._hb); this._hb = null; }
     };
   }
 
   _send(obj) {
-    try {
-      if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(obj));
-    } catch (e) {}
+    try { if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(obj)); } catch (e) {}
   }
 
   _join() {
@@ -69,20 +83,9 @@ export class Arena {
       topic: this.topic,
       event: 'phx_join',
       ref: String(++this.ref),
-      payload: {
-        config: {
-          broadcast: { self: false, ack: false },
-          presence: { key: this.id },
-          private: false,
-        },
-      },
+      payload: { config: { broadcast: { self: false, ack: false }, presence: { key: this.id }, private: false } },
     });
-    this._send({
-      topic: this.topic,
-      event: 'access_token',
-      ref: String(++this.ref),
-      payload: { access_token: SUPA_KEY },
-    });
+    this._send({ topic: this.topic, event: 'access_token', ref: String(++this.ref), payload: { access_token: SUPA_KEY } });
     this._send({
       topic: this.topic,
       event: 'presence',
@@ -90,9 +93,7 @@ export class Arena {
       payload: { event: 'track', payload: { id: this.id, name: this.name } },
     });
     if (this._hb) clearInterval(this._hb);
-    this._hb = setInterval(() => {
-      this._send({ topic: 'phoenix', event: 'heartbeat', ref: String(++this.ref), payload: {} });
-    }, 25000);
+    this._hb = setInterval(() => this._send({ topic: 'phoenix', event: 'heartbeat', ref: String(++this.ref), payload: {} }), 25000);
   }
 
   _onMessage(e) {
@@ -105,12 +106,11 @@ export class Arena {
       return;
     }
 
-    // Supabase presence gives hosts a real occupancy check. If the requested
-    // host code is already occupied, immediately move this host to a fresh code.
     if (msg.event === 'presence_state' && msg.payload && msg.payload.presences) {
-      this._presenceReady = true;
       const keys = Object.keys(msg.payload.presences);
       for (const key of keys) if (key !== this.id) this._pendingPresence.add(key);
+      // A host is never allowed to take over an occupied code. It gets a new
+      // room instead, while a JOIN operation intentionally enters the existing room.
       if (this.hosting && this._pendingPresence.size > 0) this._replaceOccupiedHostRoom();
       return;
     }
@@ -138,7 +138,6 @@ export class Arena {
       rival.speed = +p.speed || 0;
       rival.lastSeen = performance.now();
       rival.phase = p.ph === 'lobby' ? 'lobby' : 'race';
-      rival.deadline = +p.dl || 0;
       rival.ghost.setName(rival.name);
       return;
     }
@@ -157,12 +156,9 @@ export class Arena {
     this.ws = null;
     this.joined = false;
     this._pendingPresence.clear();
-    this._presenceReady = false;
 
-    // Generate a genuinely new room rather than accidentally joining another
-    // player's lobby. Show the replacement code immediately in the lobby UI.
     let nextCode = makeLobbyCode();
-    if (nextCode === oldCode) nextCode = makeLobbyCode();
+    while (nextCode === oldCode) nextCode = makeLobbyCode();
     this.roomCode = nextCode;
     this.topic = 'realtime:csr-room-' + nextCode;
     window.__csrActualLobbyCode = nextCode;
@@ -180,23 +176,16 @@ export class Arena {
       topic: this.topic,
       event: 'broadcast',
       ref: String(++this.ref),
-      payload: {
-        type: 'broadcast',
-        event: 'pos',
-        payload: { id: this.id, name: this.name, z, u, v, speed, ph: phase, dl: deadline },
-      },
+      payload: { type: 'broadcast', event: 'pos', payload: { id: this.id, name: this.name, z, u, v, speed, ph: phase, dl: deadline } },
     });
   }
 
   sendGo() {
-    this._send({
-      topic: this.topic,
-      event: 'broadcast',
-      ref: String(++this.ref),
-      payload: { type: 'broadcast', event: 'go', payload: { id: this.id } },
-    });
+    this._send({ topic: this.topic, event: 'broadcast', ref: String(++this.ref), payload: { type: 'broadcast', event: 'go', payload: { id: this.id } } });
   }
 
+  // main.js still asks for a shared deadline; returning zero prevents it from
+  // replacing the frozen lobby clock with another deadline.
   minLobbyDeadline() { return 0; }
 
   raceInProgress() {
@@ -217,12 +206,9 @@ export class Arena {
       if (near) p.ghost.place(p.z, p.u, p.v);
     }
 
-    // Four connected real racers means the lobby is full. The main game loop
-    // will start the race on this frame; no bot slots are ever counted.
-    if (this.players.size >= MAX_PLAYERS - 1 && window.__csrLobbyClockFrozen) {
-      window.__csrLobbyClockFrozen = false;
-      if (window.__csrOriginalDateNow) Date.now = window.__csrOriginalDateNow;
-    }
+    // The lobby is full when three remote real players plus this client are present.
+    // Restore normal time immediately before main.js launches the race.
+    if (this.players.size >= MAX_PLAYERS - 1) restoreLobbyClock();
   }
 
   positions() {
@@ -239,12 +225,8 @@ export class Arena {
     for (const p of this.players.values()) p.ghost.dispose();
     this.players.clear();
     this.joined = false;
-    this._presenceReady = false;
     this._pendingPresence.clear();
-    if (window.__csrLobbyClockFrozen && window.__csrOriginalDateNow) {
-      window.__csrLobbyClockFrozen = false;
-      Date.now = window.__csrOriginalDateNow;
-    }
+    restoreLobbyClock();
     if (this.ws) { try { this.ws.close(); } catch (e) {} this.ws = null; }
     window.__csrHostingLobby = false;
     window.__csrHostLobbyCode = '';
