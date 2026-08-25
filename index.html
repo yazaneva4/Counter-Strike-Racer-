@@ -10,111 +10,54 @@
 </head>
 <body>
   <canvas id="game"></canvas>
-
-  <!-- Heads-up display -->
   <div id="hud">
-    <div class="corner tl">
-      <div class="label">DISTANCE</div>
-      <div class="big"><span id="distance">0</span><span class="unit">m</span></div>
-      <div class="sub-stat"><span class="label">STYLE</span> <span id="style">0</span></div>
-    </div>
-
-    <div class="corner tr">
-      <div class="label">VELOCITY</div>
-      <div class="big"><span id="speed">0</span><span class="unit">m/s</span></div>
-      <div class="mult-row"><span id="mult" class="mult">x1</span> <span id="chain" class="chainlbl"></span></div>
-    </div>
-
-    <div id="dangerWrap" class="meter danger">
-      <div class="label">RIFT PROXIMITY</div>
-      <div class="bar"><div id="dangerBar" class="fill"></div></div>
-    </div>
-
-    <div class="meter boost">
-      <div class="label">BOOST</div>
-      <div class="bar"><div id="boostBar" class="fill"></div></div>
-    </div>
-
-    <button id="muteIndicator" class="mute" type="button" aria-label="Mute sound">
-      <span class="mute-icon">&#128266;</span><span class="mute-txt">SOUND</span><span class="mute-key desktop-only">&nbsp;(M)</span>
-    </button>
+    <div class="corner tl"><div class="label">DISTANCE</div><div class="big"><span id="distance">0</span><span class="unit">m</span></div><div class="sub-stat"><span class="label">STYLE</span> <span id="style">0</span></div></div>
+    <div class="corner tr"><div class="label">VELOCITY</div><div class="big"><span id="speed">0</span><span class="unit">m/s</span></div><div class="mult-row"><span id="mult" class="mult">x1</span> <span id="chain" class="chainlbl"></span></div></div>
+    <div id="dangerWrap" class="meter danger"><div class="label">RIFT PROXIMITY</div><div class="bar"><div id="dangerBar" class="fill"></div></div></div>
+    <div class="meter boost"><div class="label">BOOST</div><div class="bar"><div id="boostBar" class="fill"></div></div></div>
+    <button id="muteIndicator" class="mute" type="button" aria-label="Mute sound"><span class="mute-icon">&#128266;</span><span class="mute-txt">SOUND</span><span class="mute-key desktop-only">&nbsp;(M)</span></button>
     <div id="camIndicator" class="cam">CAM &middot; 3RD</div>
-
-    <!-- Race standings (shown during Race mode) -->
     <div id="raceInfo" class="raceinfo"></div>
-
-    <!-- Touch-only on-screen boost pad (shown on touch devices during play) -->
     <button id="boostBtn" aria-label="Boost">BOOST</button>
   </div>
-
   <div id="popups"></div>
 
-  <!-- Menu / game-over overlay -->
   <div id="overlay">
     <div class="panel">
       <h1 id="overlayTitle"></h1>
       <div id="overlaySub" class="overlay-sub"></div>
-
       <div id="overlayStats" class="overlay-stats"></div>
-
-      <!-- Pilot name + mode selection -->
       <div id="menuBlock">
-        <div class="namerow">
-          <span class="label">PILOT</span>
-          <input id="menuName" type="text" maxlength="20" autocomplete="off"
-                 autocapitalize="characters" spellcheck="false" placeholder="ENTER NAME" />
-        </div>
-        <div class="modebtns">
-          <button id="btnSolo" class="modebtn">SOLO RUN</button>
-          <button id="btnLive" class="modebtn live">LIVE RACE</button>
-        </div>
+        <div class="namerow"><span class="label">PILOT</span><input id="menuName" type="text" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ENTER NAME" /></div>
+        <div class="modebtns"><button id="btnSolo" class="modebtn">SOLO RUN</button><button id="btnLive" class="modebtn live">LIVE RACE</button></div>
         <div id="submitStatus" class="submit-status"></div>
 
-        <!-- Live Race: choose to host a room or join one by code -->
         <div id="liveSelect" class="live-select">
-          <div class="ls-title">HOST OR JOIN A LIVE RACE</div>
+          <div class="ls-title">CREATE OR JOIN A LIVE RACE</div>
           <div class="ls-row">
-            <button id="btnHost" class="modebtn live">HOST</button>
-            <div class="ls-join">
-              <input id="joinCode" type="text" maxlength="5" placeholder="CODE" autocomplete="off"
-                     autocapitalize="characters" spellcheck="false" />
-              <button id="btnJoin" class="modebtn race">JOIN</button>
-            </div>
+            <div class="ls-join"><input id="hostCode" type="text" maxlength="5" placeholder="YOUR NEW LOBBY CODE" autocomplete="off" autocapitalize="characters" spellcheck="false" /><button id="btnHost" class="modebtn live">CREATE</button></div>
+            <div class="ls-join"><input id="joinCode" type="text" maxlength="5" placeholder="EXISTING CODE" autocomplete="off" autocapitalize="characters" spellcheck="false" /><button id="btnJoin" class="modebtn race">JOIN</button></div>
           </div>
+          <div class="ls-help">Create a code to make your own lobby. If that code is already occupied, you automatically get a new lobby code.</div>
           <button id="btnLiveBack" class="linkbtn">&larr; back</button>
         </div>
 
-        <!-- Live Race: waiting room before the race starts -->
         <div id="lobbyPanel" class="lobby-panel">
-          <div class="lobby-title">WAITING FOR RACERS</div>
-          <div class="lobby-code">ROOM CODE <span id="lobbyCode"></span></div>
+          <div class="lobby-title">WAITING FOR REAL RACERS</div>
+          <div class="lobby-code">LOBBY CODE <span id="lobbyCode"></span></div>
           <div class="lobby-count"><span id="lobbyCountNum">1</span> / <span id="lobbyTarget">4</span> racers</div>
-          <div class="lobby-sub">Race starts in <span id="lobbyTimer">1:00</span></div>
+          <div class="lobby-sub">Waiting until the lobby is full — no countdown</div>
           <button id="btnLeaveLobby" class="linkbtn">leave</button>
         </div>
       </div>
-
-      <!-- Global leaderboard -->
-      <div class="lb-wrap">
-        <div class="lb-title">GLOBAL LEADERBOARD</div>
-        <div id="leaderboard" class="leaderboard"></div>
-      </div>
-
+      <div class="lb-wrap"><div class="lb-title">GLOBAL LEADERBOARD</div><div id="leaderboard" class="leaderboard"></div></div>
       <div id="overlayHint" class="overlay-hint"></div>
     </div>
     <div class="scanlines"></div>
   </div>
-
-  <!-- Persistent credit, shown on every screen -->
   <div id="credit">Developed by: <b>SkyCoder YazanPK</b></div>
-
   <script type="importmap">
-  {
-    "imports": {
-      "three": "./lib/three.module.js",
-      "three/addons/": "./lib/jsm/"
-    }
-  }
+  {"imports":{"three":"./lib/three.module.js","three/addons/":"./lib/jsm/"}}
   </script>
   <script type="module" src="./src/main.js"></script>
 </body>
